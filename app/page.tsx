@@ -612,70 +612,69 @@ export default function Home() {
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
-        <header className="border-b border-slate-800 pb-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {/* „Panther“-Logo (neutral gehalten) */}
-            <div className="w-11 h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
-              <span className="text-2xl" aria-hidden="true">
-                🐈‍⬛
-              </span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                GatherCart{" "}
-                <span className="text-slate-400 text-sm font-normal">
-                  {tr("V1 – lokal", "V1 – local")}
-                </span>
-              </h1>
-              <span className="block text-xs text-slate-400">
-                {tr(
-                  "Daten bleiben in diesem Browser gespeichert",
-                  "Data stays in this browser"
-                )}
-              </span>
-              <span className="block text-xs text-slate-500 mt-1">
-                {tr("Erstellt von", "Created by")}{" "}
-                <span className="font-semibold text-slate-200">
-                  Lownax
-                </span>
-              </span>
-            </div>
-          </div>
+        <header className="border-b border-slate-800 pb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div className="flex items-center gap-3">
+    {/* „Panther“-Logo (neutral gehalten) */}
+    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+      <span className="text-xl sm:text-2xl" aria-hidden="true">
+        🐈‍⬛
+      </span>
+    </div>
+    <div>
+      <h1 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
+        GatherCart{" "}
+        <span className="text-slate-400 text-xs sm:text-sm font-normal">
+          {tr("V1 – lokal", "V1 – local")}
+        </span>
+      </h1>
+      <span className="block text-xs text-slate-400">
+        {tr(
+          "Daten bleiben in diesem Browser gespeichert",
+          "Data stays in this browser"
+        )}
+      </span>
+      <span className="block text-[11px] text-slate-500 mt-1">
+        {tr("Erstellt von", "Created by")}{" "}
+        <span className="font-semibold text-slate-200">Lownax</span>
+      </span>
+    </div>
+  </div>
 
-          <div className="flex flex-col items-end gap-1 text-xs">
-            <span className="text-slate-400">
-              {tr("Sprache", "Language")}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLanguage("de")}
-                className={`px-2 py-1 rounded border text-xs ${
-                  language === "de"
-                    ? "bg-slate-100 text-slate-900 border-slate-100"
-                    : "bg-slate-900 border-slate-700 text-slate-200"
-                }`}
-              >
-                DE
-              </button>
-              <button
-                onClick={() => setLanguage("en")}
-                className={`px-2 py-1 rounded border text-xs ${
-                  language === "en"
-                    ? "bg-slate-100 text-slate-900 border-slate-100"
-                    : "bg-slate-900 border-slate-700 text-slate-200"
-                }`}
-              >
-                EN
-              </button>
-            </div>
-            <span className="text-[10px] text-slate-500">
-              {tr(
-                "EN als internationale Standardsprache",
-                "EN as global default language"
-              )}
-            </span>
-          </div>
-        </header>
+  <div className="flex flex-col items-start sm:items-end gap-1 text-xs">
+    <span className="text-slate-400">
+      {tr("Sprache", "Language")}
+    </span>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setLanguage("de")}
+        className={`px-2 py-1 rounded border text-xs ${
+          language === "de"
+            ? "bg-slate-100 text-slate-900 border-slate-100"
+            : "bg-slate-900 border-slate-700 text-slate-200"
+        }`}
+      >
+        DE
+      </button>
+      <button
+        onClick={() => setLanguage("en")}
+        className={`px-2 py-1 rounded border text-xs ${
+          language === "en"
+            ? "bg-slate-100 text-slate-900 border-slate-100"
+            : "bg-slate-900 border-slate-700 text-slate-200"
+        }`}
+      >
+        EN
+      </button>
+    </div>
+    <span className="text-[10px] text-slate-500">
+      {tr(
+        "EN als internationale Standardsprache",
+        "EN as global default language"
+      )}
+    </span>
+  </div>
+</header>
+
 
         {/* Daten-Tools: Export / Import / Reset */}
         <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs flex flex-wrap gap-3 items-center justify-between">
