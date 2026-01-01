@@ -47,6 +47,7 @@ export default function Home() {
   const [projectName, setProjectName] = useState("");
   const [projectBudget, setProjectBudget] = useState("");
   const [projectCurrency, setProjectCurrency] = useState("EUR");
+  const [projectCurrencyCustom, setProjectCurrencyCustom] = useState("");
 
   // Item-Formular
   const [itemName, setItemName] = useState("");
@@ -60,6 +61,7 @@ export default function Home() {
   const [editProjectName, setEditProjectName] = useState("");
   const [editBudget, setEditBudget] = useState("");
   const [editCurrency, setEditCurrency] = useState("EUR");
+  const [editCurrencyCustom, setEditCurrencyCustom] = useState("");
 
   // Item bearbeiten
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -126,10 +128,12 @@ export default function Home() {
       setEditProjectName(p.name);
       setEditBudget(p.budget != null ? String(p.budget) : "");
       setEditCurrency(p.currency || "EUR");
+      setEditCurrencyCustom("");
     } else {
       setEditProjectName("");
       setEditBudget("");
       setEditCurrency("EUR");
+      setEditCurrencyCustom("");
     }
     cancelEditItem();
   }, [projects, selectedProjectId]);
@@ -141,17 +145,24 @@ export default function Home() {
     e.preventDefault();
     if (!projectName.trim()) return;
 
+    const finalCurrency =
+      projectCurrency === "CUSTOM" && projectCurrencyCustom.trim()
+        ? projectCurrencyCustom.trim().toUpperCase()
+        : projectCurrency || "EUR";
+
     const newProject: Project = {
       id: projects.length > 0 ? projects[projects.length - 1].id + 1 : 1,
       name: projectName.trim(),
       budget: projectBudget ? Number(projectBudget) : null,
-      currency: projectCurrency || "EUR",
+      currency: finalCurrency,
       items: [],
     };
 
     setProjects((prev) => [...prev, newProject]);
     setProjectName("");
     setProjectBudget("");
+    setProjectCurrency("EUR");
+    setProjectCurrencyCustom("");
     setSelectedProjectId(newProject.id);
   }
 
@@ -244,12 +255,16 @@ export default function Home() {
     e.preventDefault();
     if (!selectedProject) return;
     const newBudget = editBudget ? Number(editBudget) : null;
-    const newCurrency = editCurrency || "EUR";
+
+    const finalCurrency =
+      editCurrency === "CUSTOM" && editCurrencyCustom.trim()
+        ? editCurrencyCustom.trim().toUpperCase()
+        : editCurrency || "EUR";
 
     setProjects((prev) =>
       prev.map((p) =>
         p.id === selectedProject.id
-          ? { ...p, budget: newBudget, currency: newCurrency }
+          ? { ...p, budget: newBudget, currency: finalCurrency }
           : p
       )
     );
@@ -548,8 +563,9 @@ export default function Home() {
           throw new Error("Ungültiges Format");
         }
 
-        const normalized = importedProjects.map((p) => ({
+        const normalized = importedProjects.map((p, pi) => ({
           ...p,
+          id: p.id ?? pi + 1,
           currency: p.currency || "EUR",
           items: (p.items || []).map((item: any, index: number) => ({
             ...item,
@@ -595,46 +611,69 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header */}
+        {/* Header mit Panther-Lownax-Branding */}
         <header className="border-b border-slate-800 pb-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">
-              GatherCart{" "}
-              <span className="text-slate-400 text-sm">
-                {tr("V1 – lokal", "V1 – local")}
+          <div className="flex items-center gap-3">
+            {/* „Panther“-Logo (neutral gehalten) */}
+            <div className="w-11 h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+              <span className="text-2xl" aria-hidden="true">
+                🐈‍⬛
               </span>
-            </h1>
-            <span className="text-xs text-slate-400">
-              {tr(
-                "Daten bleiben in diesem Browser gespeichert",
-                "Data stays in this browser"
-              )}
-            </span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                GatherCart{" "}
+                <span className="text-slate-400 text-sm font-normal">
+                  {tr("V1 – lokal", "V1 – local")}
+                </span>
+              </h1>
+              <span className="block text-xs text-slate-400">
+                {tr(
+                  "Daten bleiben in diesem Browser gespeichert",
+                  "Data stays in this browser"
+                )}
+              </span>
+              <span className="block text-xs text-slate-500 mt-1">
+                {tr("Erstellt von", "Created by")}{" "}
+                <span className="font-semibold text-slate-200">
+                  Lownax
+                </span>
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs">
+
+          <div className="flex flex-col items-end gap-1 text-xs">
             <span className="text-slate-400">
               {tr("Sprache", "Language")}
             </span>
-            <button
-              onClick={() => setLanguage("de")}
-              className={`px-2 py-1 rounded border text-xs ${
-                language === "de"
-                  ? "bg-slate-100 text-slate-900 border-slate-100"
-                  : "bg-slate-900 border-slate-700 text-slate-200"
-              }`}
-            >
-              DE
-            </button>
-            <button
-              onClick={() => setLanguage("en")}
-              className={`px-2 py-1 rounded border text-xs ${
-                language === "en"
-                  ? "bg-slate-100 text-slate-900 border-slate-100"
-                  : "bg-slate-900 border-slate-700 text-slate-200"
-              }`}
-            >
-              EN
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLanguage("de")}
+                className={`px-2 py-1 rounded border text-xs ${
+                  language === "de"
+                    ? "bg-slate-100 text-slate-900 border-slate-100"
+                    : "bg-slate-900 border-slate-700 text-slate-200"
+                }`}
+              >
+                DE
+              </button>
+              <button
+                onClick={() => setLanguage("en")}
+                className={`px-2 py-1 rounded border text-xs ${
+                  language === "en"
+                    ? "bg-slate-100 text-slate-900 border-slate-100"
+                    : "bg-slate-900 border-slate-700 text-slate-200"
+                }`}
+              >
+                EN
+              </button>
+            </div>
+            <span className="text-[10px] text-slate-500">
+              {tr(
+                "EN als internationale Standardsprache",
+                "EN as global default language"
+              )}
+            </span>
           </div>
         </header>
 
@@ -695,24 +734,62 @@ export default function Home() {
                   <label className="text-slate-300">
                     {tr("Budget (optional)", "Budget (optional)")}
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      className="flex-1 px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
-                      type="number"
-                      value={projectBudget}
-                      onChange={(e) => setProjectBudget(e.target.value)}
-                      placeholder={tr("z.B. 2500", "e.g. 2500")}
-                    />
-                    <select
-                      className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
-                      value={projectCurrency}
-                      onChange={(e) => setProjectCurrency(e.target.value)}
-                    >
-                      <option value="EUR">EUR</option>
-                      <option value="USD">USD</option>
-                      <option value="THB">THB</option>
-                      <option value="GBP">GBP</option>
-                    </select>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        type="number"
+                        value={projectBudget}
+                        onChange={(e) => setProjectBudget(e.target.value)}
+                        placeholder={tr("z.B. 2500", "e.g. 2500")}
+                      />
+                      <select
+                        className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        value={projectCurrency}
+                        onChange={(e) => {
+                          setProjectCurrency(e.target.value);
+                          if (e.target.value !== "CUSTOM") {
+                            setProjectCurrencyCustom("");
+                          }
+                        }}
+                      >
+                        <option value="EUR">EUR – Euro</option>
+                        <option value="USD">USD – US Dollar</option>
+                        <option value="THB">THB – Thai Baht</option>
+                        <option value="GBP">GBP – British Pound</option>
+                        <option value="CHF">CHF – Swiss Franc</option>
+                        <option value="JPY">JPY – Japanese Yen</option>
+                        <option value="AUD">AUD – Australian Dollar</option>
+                        <option value="CAD">CAD – Canadian Dollar</option>
+                        <option value="SEK">SEK – Swedish Krona</option>
+                        <option value="NOK">NOK – Norwegian Krone</option>
+                        <option value="DKK">DKK – Danish Krone</option>
+                        <option value="PLN">PLN – Polish Złoty</option>
+                        <option value="CZK">CZK – Czech Koruna</option>
+                        <option value="TRY">TRY – Turkish Lira</option>
+                        <option value="ZAR">ZAR – South African Rand</option>
+                        <option value="CUSTOM">
+                          {tr(
+                            "Andere / eigene Währung",
+                            "Other / custom currency"
+                          )}
+                        </option>
+                      </select>
+                    </div>
+                    {projectCurrency === "CUSTOM" && (
+                      <input
+                        className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        value={projectCurrencyCustom}
+                        onChange={(e) =>
+                          setProjectCurrencyCustom(e.target.value)
+                        }
+                        placeholder={tr(
+                          "z.B. MXN, BRL, PHP",
+                          "e.g. MXN, BRL, PHP"
+                        )}
+                        maxLength={5}
+                      />
+                    )}
                   </div>
                 </div>
                 <button
@@ -913,14 +990,50 @@ export default function Home() {
                           <select
                             className="mt-1 w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs"
                             value={editCurrency}
-                            onChange={(e) => setEditCurrency(e.target.value)}
+                            onChange={(e) => {
+                              setEditCurrency(e.target.value);
+                              if (e.target.value !== "CUSTOM") {
+                                setEditCurrencyCustom("");
+                              }
+                            }}
                           >
-                            <option value="EUR">EUR</option>
-                            <option value="USD">USD</option>
-                            <option value="THB">THB</option>
-                            <option value="GBP">GBP</option>
+                            <option value="EUR">EUR – Euro</option>
+                            <option value="USD">USD – US Dollar</option>
+                            <option value="THB">THB – Thai Baht</option>
+                            <option value="GBP">GBP – British Pound</option>
+                            <option value="CHF">CHF – Swiss Franc</option>
+                            <option value="JPY">JPY – Japanese Yen</option>
+                            <option value="AUD">AUD – Australian Dollar</option>
+                            <option value="CAD">CAD – Canadian Dollar</option>
+                            <option value="SEK">SEK – Swedish Krona</option>
+                            <option value="NOK">NOK – Norwegian Krone</option>
+                            <option value="DKK">DKK – Danish Krone</option>
+                            <option value="PLN">PLN – Polish Złoty</option>
+                            <option value="CZK">CZK – Czech Koruna</option>
+                            <option value="TRY">TRY – Turkish Lira</option>
+                            <option value="ZAR">ZAR – South African Rand</option>
+                            <option value="CUSTOM">
+                              {tr(
+                                "Andere / eigene Währung",
+                                "Other / custom currency"
+                              )}
+                            </option>
                           </select>
                         </label>
+                        {editCurrency === "CUSTOM" && (
+                          <input
+                            className="mt-1 w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs"
+                            value={editCurrencyCustom}
+                            onChange={(e) =>
+                              setEditCurrencyCustom(e.target.value)
+                            }
+                            placeholder={tr(
+                              "z.B. MXN, BRL, PHP",
+                              "e.g. MXN, BRL, PHP"
+                            )}
+                            maxLength={5}
+                          />
+                        )}
                         <button
                           type="submit"
                           className="w-full bg-slate-800 hover:bg-slate-700 rounded py-1"
@@ -1388,6 +1501,12 @@ export default function Home() {
             )}
           </div>
         </section>
+
+        {/* Footer / Signatur */}
+        <footer className="mt-4 border-t border-slate-800 pt-3 text-[11px] text-slate-500 text-center">
+          GatherCart · {tr("Konzept & Umsetzung", "Concept & implementation")}{" "}
+          <span className="font-semibold text-slate-300">Lownax</span>
+        </footer>
       </div>
     </main>
   );
