@@ -96,6 +96,7 @@ export default function Home() {
     if (raw) {
       try {
         const saved: Project[] = JSON.parse(raw);
+        // Fallback: falls alte Daten keine currency haben
         const normalized = saved.map((p) => ({
           ...p,
           currency: p.currency || "EUR",
@@ -486,6 +487,7 @@ export default function Home() {
         return 0;
       }) ?? [];
 
+  // Quick-Actions Status
   function setAllItemsStatus(status: ItemStatus) {
     if (!selectedProject) return;
     setProjects((prev) =>
@@ -497,6 +499,7 @@ export default function Home() {
     );
   }
 
+  // Projekt duplizieren
   function duplicateProject(projectId: number) {
     const original = projects.find((p) => p.id === projectId);
     if (!original) return;
@@ -523,6 +526,7 @@ export default function Home() {
     setSelectedProjectId(newProjectId);
   }
 
+  // Export / Import / Reset
   function handleExport() {
     const data = {
       version: 1,
@@ -605,21 +609,21 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-4 overflow-x-hidden">
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-4">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
-        <header className="border-b border-slate-800 pb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <header className="border-b border-slate-800 pb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {/* „Panther“-Logo (neutral gehalten) */}
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
-              <span className="text-xl sm:text-2xl" aria-hidden="true">
+            <div className="w-11 h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+              <span className="text-2xl" aria-hidden="true">
                 🐈‍⬛
               </span>
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
                 GatherCart{" "}
-                <span className="text-slate-400 text-xs sm:text-sm font-normal">
+                <span className="text-slate-400 text-sm font-normal">
                   {tr("V1 – lokal", "V1 – local")}
                 </span>
               </h1>
@@ -629,14 +633,16 @@ export default function Home() {
                   "Data stays in this browser"
                 )}
               </span>
-              <span className="block text-[11px] text-slate-500 mt-1">
+              <span className="block text-xs text-slate-500 mt-1">
                 {tr("Erstellt von", "Created by")}{" "}
-                <span className="font-semibold text-slate-200">Lownax</span>
+                <span className="font-semibold text-slate-200">
+                  Lownax
+                </span>
               </span>
             </div>
           </div>
 
-          <div className="flex flex-col items-start sm:items-end gap-1 text-xs">
+          <div className="flex flex-col items-end gap-1 text-xs">
             <span className="text-slate-400">
               {tr("Sprache", "Language")}
             </span>
