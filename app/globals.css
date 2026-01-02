@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
-/* Immer Dark Mode – egal welches Systemtheme */
-
 :root {
-  /* Dunkler Hintergrund und helle Schrift */
-  --background: #020617;  /* in etwa Tailwind bg-slate-950 */
-  --foreground: #e5e7eb;  /* ungefähr text-slate-200 */
+  /* Standard: eher dark, passend zu deinem Design */
+  --background: #020617; /* ähnlich slate-950 */
+  --foreground: #e5e7eb; /* ähnlich slate-200 */
 }
 
-/* Tailwind Theme Variablen */
+:root.theme-light {
+  --background: #f9fafb; /* helles Grau */
+  --foreground: #020617; /* sehr dunkles Grau */
+}
+
+:root.theme-dark {
+  --background: #020617;
+  --foreground: #e5e7eb;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -16,14 +23,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* HTML/BODY vollflächig dunkel machen */
-html,
 body {
-  margin: 0;
-  padding: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
 

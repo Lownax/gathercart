@@ -7,7 +7,6 @@ type ItemStatus = "planned" | "purchased";
 type Lang = "de" | "en";
 type ItemFilter = "all" | "planned" | "purchased";
 type ItemSort = "createdDesc" | "priceAsc" | "nameAsc";
-type TemplateId = "trip" | "pcBuild" | "household";
 
 interface Item {
   id: number;
@@ -31,164 +30,14 @@ interface Project {
 
 const STORAGE_KEY = "gathercart-projects-v1";
 const LANGUAGE_KEY = "gathercart-language-v1";
-
-interface TemplateConfig {
-  nameDe: string;
-  nameEn: string;
-  budget: number | null;
-  currency: string;
-  items: {
-    nameDe: string;
-    nameEn: string;
-    shopNameDe: string;
-    shopNameEn: string;
-    price: number;
-    quantity?: number;
-    noteDe?: string;
-    noteEn?: string;
-  }[];
-}
-
-const TEMPLATE_CONFIGS: Record<TemplateId, TemplateConfig> = {
-  trip: {
-    nameDe: "Reise-Budget",
-    nameEn: "Trip budget",
-    budget: 2000,
-    currency: "EUR",
-    items: [
-      {
-        nameDe: "Flüge",
-        nameEn: "Flights",
-        shopNameDe: "Airline / Portal",
-        shopNameEn: "Airline / portal",
-        price: 800,
-        noteDe: "Hin- und Rückflug",
-        noteEn: "Return flight",
-      },
-      {
-        nameDe: "Unterkunft",
-        nameEn: "Accommodation",
-        shopNameDe: "Hotel / Apartment",
-        shopNameEn: "Hotel / apartment",
-        price: 700,
-        noteDe: "Gesamtkosten für die Unterkunft",
-        noteEn: "Total cost for stay",
-      },
-      {
-        nameDe: "Aktivitäten & Eintritte",
-        nameEn: "Activities & tickets",
-        shopNameDe: "Diverse",
-        shopNameEn: "Various",
-        price: 250,
-      },
-      {
-        nameDe: "Essen & Getränke",
-        nameEn: "Food & drinks",
-        shopNameDe: "Restaurants / Supermarkt",
-        shopNameEn: "Restaurants / supermarket",
-        price: 250,
-      },
-    ],
-  },
-  pcBuild: {
-    nameDe: "Gaming-/Arbeits-PC",
-    nameEn: "Gaming / Work PC",
-    budget: 1500,
-    currency: "EUR",
-    items: [
-      {
-        nameDe: "CPU",
-        nameEn: "CPU",
-        shopNameDe: "Hardware-Shop",
-        shopNameEn: "Hardware shop",
-        price: 300,
-      },
-      {
-        nameDe: "Grafikkarte",
-        nameEn: "GPU",
-        shopNameDe: "Hardware-Shop",
-        shopNameEn: "Hardware shop",
-        price: 500,
-      },
-      {
-        nameDe: "RAM",
-        nameEn: "RAM",
-        shopNameDe: "Hardware-Shop",
-        shopNameEn: "Hardware shop",
-        price: 150,
-      },
-      {
-        nameDe: "SSD",
-        nameEn: "SSD",
-        shopNameDe: "Hardware-Shop",
-        shopNameEn: "Hardware shop",
-        price: 150,
-      },
-      {
-        nameDe: "Gehäuse & Netzteil",
-        nameEn: "Case & PSU",
-        shopNameDe: "Hardware-Shop",
-        shopNameEn: "Hardware shop",
-        price: 150,
-      },
-      {
-        nameDe: "Peripherie (Maus, Tastatur, Headset)",
-        nameEn: "Peripherals (mouse, keyboard, headset)",
-        shopNameDe: "Online-Shop",
-        shopNameEn: "Online shop",
-        price: 250,
-      },
-    ],
-  },
-  household: {
-    nameDe: "Haushalt & Fixkosten",
-    nameEn: "Household & fixed costs",
-    budget: 1200,
-    currency: "EUR",
-    items: [
-      {
-        nameDe: "Miete / Kreditrate",
-        nameEn: "Rent / mortgage",
-        shopNameDe: "Vermieter / Bank",
-        shopNameEn: "Landlord / bank",
-        price: 700,
-      },
-      {
-        nameDe: "Strom & Heizung",
-        nameEn: "Electricity & heating",
-        shopNameDe: "Versorger",
-        shopNameEn: "Provider",
-        price: 150,
-      },
-      {
-        nameDe: "Internet & Mobilfunk",
-        nameEn: "Internet & mobile",
-        shopNameDe: "Provider",
-        shopNameEn: "Provider",
-        price: 80,
-      },
-      {
-        nameDe: "Lebensmittel",
-        nameEn: "Groceries",
-        shopNameDe: "Supermarkt",
-        shopNameEn: "Supermarket",
-        price: 200,
-      },
-      {
-        nameDe: "Sonstiges",
-        nameEn: "Miscellaneous",
-        shopNameDe: "Diverse",
-        shopNameEn: "Various",
-        price: 70,
-      },
-    ],
-  },
-};
+const SELECTED_PROJECT_KEY = "gathercart-selected-project-v1";
+const THEME_KEY = "gathercart-theme-v1";
 
 export default function Home() {
   const [language, setLanguage] = useState<Lang>("de");
   const [itemFilter, setItemFilter] = useState<ItemFilter>("all");
   const [itemSort, setItemSort] = useState<ItemSort>("createdDesc");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   const tr = (de: string, en: string) => (language === "de" ? de : en);
 
@@ -243,24 +92,57 @@ export default function Home() {
     window.localStorage.setItem(LANGUAGE_KEY, language);
   }, [language]);
 
-  // Projekte laden
+  // Theme laden
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = window.localStorage.getItem(THEME_KEY);
+    if (saved === "dark" || saved === "light") {
+      setTheme(saved);
+    }
+  }, []);
+
+  // Theme anwenden (HTML-Root-Klasse + speichern)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    root.classList.remove("theme-dark", "theme-light");
+    root.classList.add(theme === "dark" ? "theme-dark" : "theme-light");
+    window.localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  // Projekte + zuletzt gewähltes Projekt laden
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = window.localStorage.getItem(STORAGE_KEY);
+    let normalized: Project[] = [];
+
     if (raw) {
       try {
         const saved: Project[] = JSON.parse(raw);
-        const normalized = saved.map((p) => ({
+        normalized = saved.map((p) => ({
           ...p,
           currency: p.currency || "EUR",
         }));
         setProjects(normalized);
-        if (normalized.length > 0) {
-          setSelectedProjectId(normalized[0].id);
-        }
       } catch (err) {
         console.error("Konnte gespeicherte Projekte nicht laden:", err);
       }
+    }
+
+    // Versuche zuletzt genutztes Projekt wiederherzustellen
+    const storedSelected = window.localStorage.getItem(SELECTED_PROJECT_KEY);
+    if (storedSelected && normalized.length > 0) {
+      const idNum = Number(storedSelected);
+      const found = normalized.find((p) => p.id === idNum);
+      if (found) {
+        setSelectedProjectId(found.id);
+        return;
+      }
+    }
+
+    // Fallback: erstes Projekt auswählen
+    if (normalized.length > 0) {
+      setSelectedProjectId(normalized[0].id);
     }
   }, []);
 
@@ -274,8 +156,18 @@ export default function Home() {
     }
   }, [projects]);
 
-  const selectedProject =
-    projects.find((p) => p.id === selectedProjectId) || null;
+  // Auswahl des Projekts in localStorage merken
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (selectedProjectId != null) {
+      window.localStorage.setItem(
+        SELECTED_PROJECT_KEY,
+        String(selectedProjectId)
+      );
+    } else {
+      window.localStorage.removeItem(SELECTED_PROJECT_KEY);
+    }
+  }, [selectedProjectId]);
 
   // Edit-Felder syncen bei Projektwechsel
   useEffect(() => {
@@ -292,15 +184,24 @@ export default function Home() {
       setEditCurrencyCustom("");
     }
     cancelEditItem();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, selectedProjectId]);
+
+  const selectedProject =
+    projects.find((p) => p.id === selectedProjectId) || null;
+
+  // Browser-Tab-Titel dynamisch setzen
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const base = "GatherCart";
+    if (selectedProject) {
+      document.title = `${base} – ${selectedProject.name}`;
+    } else {
+      document.title = base;
+    }
+  }, [selectedProject?.name]);
 
   function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
-    applyCreateProject();
-  }
-
-  function applyCreateProject() {
     if (!projectName.trim()) return;
 
     const finalCurrency =
@@ -322,41 +223,6 @@ export default function Home() {
     setProjectCurrency("EUR");
     setProjectCurrencyCustom("");
     setSelectedProjectId(newProject.id);
-  }
-
-  function createTemplateProject(templateId: TemplateId) {
-    const tpl = TEMPLATE_CONFIGS[templateId];
-    const now = new Date().toISOString();
-    const newProjectId =
-      projects.length > 0 ? projects[projects.length - 1].id + 1 : 1;
-
-    const items: Item[] = tpl.items.map((item, index) => ({
-      id: index + 1,
-      name: language === "de" ? item.nameDe : item.nameEn,
-      shopName: language === "de" ? item.shopNameDe : item.shopNameEn,
-      url: "",
-      price: item.price,
-      quantity: item.quantity ?? 1,
-      status: "planned",
-      createdAt: now,
-      note:
-        language === "de"
-          ? item.noteDe || undefined
-          : item.noteEn || undefined,
-    }));
-
-    const newProject: Project = {
-      id: newProjectId,
-      name: language === "de" ? tpl.nameDe : tpl.nameEn,
-      budget: tpl.budget,
-      currency: tpl.currency,
-      items,
-    };
-
-    setProjects((prev) => [...prev, newProject]);
-    setSelectedProjectId(newProjectId);
-    setItemFilter("all");
-    setItemSort("createdDesc");
   }
 
   function handleAddItem(e: React.FormEvent) {
@@ -446,10 +312,6 @@ export default function Home() {
 
   function handleUpdateProjectMeta(e: React.FormEvent) {
     e.preventDefault();
-    applyUpdateProjectMeta();
-  }
-
-  function applyUpdateProjectMeta() {
     if (!selectedProject) return;
     const newBudget = editBudget ? Number(editBudget) : null;
 
@@ -469,10 +331,6 @@ export default function Home() {
 
   function handleUpdateProjectName(e: React.FormEvent) {
     e.preventDefault();
-    applyUpdateProjectName();
-  }
-
-  function applyUpdateProjectName() {
     if (!selectedProject) return;
     if (!editProjectName.trim()) return;
 
@@ -483,20 +341,6 @@ export default function Home() {
         p.id === selectedProject.id ? { ...p, name: newName } : p
       )
     );
-  }
-
-  function handleProjectNameKeyDown(
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      applyUpdateProjectName();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      if (selectedProject) {
-        setEditProjectName(selectedProject.name);
-      }
-    }
   }
 
   function startEditItem(item: Item) {
@@ -551,20 +395,6 @@ export default function Home() {
     cancelEditItem();
   }
 
-  function handleItemEditKeyDown(
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-    projectId: number,
-    itemId: number
-  ) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      saveEditedItem(projectId, itemId);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancelEditItem();
-    }
-  }
-
   function getTotals(project: Project | null) {
     if (!project) return { totalPlanned: 0, totalPurchased: 0 };
     const totalPlanned = project.items.reduce(
@@ -585,71 +415,6 @@ export default function Home() {
   if (selectedProject && selectedProject.budget && selectedProject.budget > 0) {
     plannedPercent = (totalPlanned / selectedProject.budget) * 100;
     purchasedPercent = (totalPurchased / selectedProject.budget) * 100;
-  }
-
-  const locale = language === "de" ? "de-DE" : "en-US";
-
-  const filteredItems =
-    selectedProject?.items
-      .filter((item) => {
-        if (itemFilter === "all") return true;
-        if (itemFilter === "planned") return item.status === "planned";
-        if (itemFilter === "purchased") return item.status === "purchased";
-        return true;
-      })
-      .sort((a, b) => {
-        if (itemSort === "createdDesc") {
-          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return bTime - aTime;
-        }
-        if (itemSort === "priceAsc") {
-          if (a.price === b.price) {
-            return a.name.localeCompare(b.name);
-          }
-          return a.price - b.price;
-        }
-        if (itemSort === "nameAsc") {
-          return a.name.localeCompare(b.name);
-        }
-        return 0;
-      }) ?? [];
-
-  function setAllItemsStatus(status: ItemStatus) {
-    if (!selectedProject) return;
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === selectedProject.id
-          ? { ...p, items: p.items.map((item) => ({ ...item, status })) }
-          : p
-      )
-    );
-  }
-
-  function duplicateProject(projectId: number) {
-    const original = projects.find((p) => p.id === projectId);
-    if (!original) return;
-
-    const newProjectId =
-      projects.length > 0 ? projects[projects.length - 1].id + 1 : 1;
-
-    const clonedItems: Item[] = original.items.map((item, index) => ({
-      ...item,
-      id: index + 1,
-    }));
-
-    const newProject: Project = {
-      ...original,
-      id: newProjectId,
-      name:
-        language === "de"
-          ? `${original.name} (Kopie)`
-          : `${original.name} (Copy)`,
-      items: clonedItems,
-    };
-
-    setProjects((prev) => [...prev, newProject]);
-    setSelectedProjectId(newProjectId);
   }
 
   async function handleCopyProjectList() {
@@ -691,6 +456,7 @@ export default function Home() {
     lines.push("");
 
     lines.push(language === "de" ? "Produkte:" : "Items:");
+    const locale = language === "de" ? "de-DE" : "en-US";
 
     selectedProject.items.forEach((item) => {
       const check = item.status === "purchased" ? "[x]" : "[ ]";
@@ -708,9 +474,9 @@ export default function Home() {
           : ` – Note: ${item.note}`
         : "";
       lines.push(
-        `${check} ${item.name}${qtyPart} – ${item.price.toFixed(
-          2
-        )} ${currency} – ${item.shopName}${timePart}${notePart}`
+        `${check} ${item.name}${qtyPart} – ${item.price.toFixed(2)} ${currency} – ${
+          item.shopName
+        }${timePart}${notePart}`
       );
       if (item.url) {
         lines.push(`    ${item.url}`);
@@ -749,6 +515,92 @@ export default function Home() {
         text
       );
     }
+  }
+
+  const locale = language === "de" ? "de-DE" : "en-US";
+
+  // Items nach Filter + Sortierung
+  const filteredItems =
+    selectedProject?.items
+      .filter((item) => {
+        if (itemFilter === "all") return true;
+        if (itemFilter === "planned") return item.status === "planned";
+        if (itemFilter === "purchased") return item.status === "purchased";
+        return true;
+      })
+      .sort((a, b) => {
+        if (itemSort === "createdDesc") {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        }
+        if (itemSort === "priceAsc") {
+          if (a.price === b.price) {
+            return a.name.localeCompare(b.name);
+          }
+          return a.price - b.price;
+        }
+        if (itemSort === "nameAsc") {
+          return a.name.localeCompare(b.name);
+        }
+        return 0;
+      }) ?? [];
+
+  // Quick-Actions Status
+  function setAllItemsStatus(status: ItemStatus) {
+    if (!selectedProject) return;
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === selectedProject.id
+          ? { ...p, items: p.items.map((item) => ({ ...item, status })) }
+          : p
+      )
+    );
+  }
+
+  // Projekt duplizieren
+  function duplicateProject(projectId: number) {
+    const original = projects.find((p) => p.id === projectId);
+    if (!original) return;
+
+    const newProjectId =
+      projects.length > 0 ? projects[projects.length - 1].id + 1 : 1;
+
+    const clonedItems: Item[] = original.items.map((item, index) => ({
+      ...item,
+      id: index + 1,
+    }));
+
+    const newProject: Project = {
+      ...original,
+      id: newProjectId,
+      name:
+        language === "de"
+          ? `${original.name} (Kopie)`
+          : `${original.name} (Copy)`,
+      items: clonedItems,
+    };
+
+    setProjects((prev) => [...prev, newProject]);
+    setSelectedProjectId(newProjectId);
+  }
+
+  // Export / Import / Reset
+  function handleExport() {
+    const data = {
+      version: 1,
+      projects,
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gathercart-data.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -800,23 +652,6 @@ export default function Home() {
     reader.readAsText(file);
   }
 
-  function handleExport() {
-    const data = {
-      version: 1,
-      projects,
-    };
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "gathercart-data.json";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
   function handleResetAll() {
     const ok = window.confirm(
       language === "de"
@@ -829,47 +664,43 @@ export default function Home() {
     setSelectedProjectId(null);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(SELECTED_PROJECT_KEY);
     }
   }
 
-  const itemCount = selectedProject?.items.length ?? 0;
-  const openCount =
-    selectedProject?.items.filter((i) => i.status === "planned").length ?? 0;
-  const purchasedCount =
-    selectedProject?.items.filter((i) => i.status === "purchased").length ?? 0;
-
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-4">
+    <main className="min-h-screen bg-background text-foreground p-4 overflow-x-hidden">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
-        <header className="border-b border-slate-800 pb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <header className="border-b border-slate-800 pb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
-              <span className="text-xl sm:text-2xl" aria-hidden="true">
+            {/* „Panther“-Logo (neutral gehalten) */}
+            <div className="w-11 h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+              <span className="text-2xl" aria-hidden="true">
                 🐈‍⬛
               </span>
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
                 GatherCart{" "}
-                <span className="text-slate-400 text-xs sm:text-sm font-normal">
+                <span className="text-slate-400 text-sm font-normal">
                   {tr("V1 – lokal", "V1 – local")}
                 </span>
               </h1>
               <span className="block text-xs text-slate-400">
                 {tr(
-                  "Daten bleiben in diesem Browser gespeichert",
-                  "Data stays in this browser"
+                  "Ein schlankes Tool zum Planen von Budgets & Wunschlisten.",
+                  "A lightweight tool to plan budgets & wishlists."
                 )}
               </span>
-              <span className="block text-[11px] text-slate-500 mt-1">
+              <span className="block text-xs text-slate-500 mt-1">
                 {tr("Erstellt von", "Created by")}{" "}
                 <span className="font-semibold text-slate-200">Lownax</span>
               </span>
             </div>
           </div>
 
-          <div className="flex flex-col items-start sm:items-end gap-1 text-xs">
+          <div className="flex flex-col items-end gap-1 text-xs">
             <span className="text-slate-400">
               {tr("Sprache", "Language")}
             </span>
@@ -901,43 +732,51 @@ export default function Home() {
                 "EN as global default language"
               )}
             </span>
+
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-slate-400">
+                {tr("Theme", "Theme")}
+              </span>
+              <button
+                onClick={() =>
+                  setTheme((prev) => (prev === "dark" ? "light" : "dark"))
+                }
+                className="px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs flex items-center gap-1"
+              >
+                {theme === "dark" ? "🌙 Dark" : "☀️ Light"}
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* Kurz-Erklärung / How-To */}
-        <section
-          id="howto"
-          className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs sm:text-sm space-y-2"
-        >
-          <h2 className="text-sm sm:text-base font-semibold text-slate-100">
-            {tr(
-              "Was ist GatherCart?",
-              "What is GatherCart?"
-            )}
+        {/* Kurze Erklärung / How-To */}
+        <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm">
+          <h2 className="text-base font-semibold mb-2">
+            {tr("Wie funktioniert GatherCart?", "How does GatherCart work?")}
           </h2>
-          <p className="text-slate-300">
-            {tr(
-              "GatherCart hilft dir, Budgets und Einkaufslisten für beliebige Projekte zu planen – Reisen, PC-Builds, Haushalt, Events und mehr. Alles bleibt lokal in deinem Browser gespeichert.",
-              "GatherCart helps you plan budgets and shopping lists for any project – trips, PC builds, household, events and more. Everything stays local in your browser."
-            )}
-          </p>
-          <ul className="list-disc list-inside text-slate-400 space-y-1">
+          <ul className="list-disc list-inside space-y-1 text-slate-300">
             <li>
               {tr(
-                "Lege links ein Projekt an oder nutze eine Vorlage.",
-                "Create a project on the left or use a template."
+                "Lege links ein Projekt an (z.B. Urlaub, Umzug, PC-Build).",
+                "Create a project on the left (e.g. vacation, moving, PC build)."
               )}
             </li>
             <li>
               {tr(
-                "Rechts fügst du Produkte / Ausgaben hinzu und behältst den Überblick über Budget und Status.",
-                "On the right you add items/expenses and keep track of budget and status."
+                "Füge rechts Produkte/Dienstleistungen mit Preis, Menge und Notizen hinzu.",
+                "Add products/services with price, quantity and notes on the right."
               )}
             </li>
             <li>
               {tr(
-                "Mit Export / Import kannst du deine Daten sichern oder übertragen.",
-                "Use export / import to back up or move your data."
+                "Nutze Filter, Sortierung und die Checkbox, um gekaufte Einträge zu markieren.",
+                "Use filters, sorting and the checkbox to mark purchased items."
+              )}
+            </li>
+            <li>
+              {tr(
+                "Exportiere oder importiere deine Daten als JSON, um sie zu sichern.",
+                "Export or import your data as JSON to back it up."
               )}
             </li>
           </ul>
@@ -976,138 +815,95 @@ export default function Home() {
         <section className="grid md:grid-cols-[260px,1fr] gap-6">
           {/* Links: Projekte */}
           <div className="space-y-6">
-            {/* Neues Projekt + Templates */}
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-4">
-              <div>
-                <h2 className="text-lg font-semibold mb-3">
-                  {tr("Neues Projekt", "New project")}
-                </h2>
-                <form
-                  onSubmit={handleCreateProject}
-                  className="space-y-3 text-sm"
-                >
-                  <div className="flex flex-col gap-1">
-                    <label className="text-slate-300">
-                      {tr("Name", "Name")}
-                    </label>
-                    <input
-                      className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
-                      value={projectName}
-                      onChange={(e) => setProjectName(e.target.value)}
-                      placeholder={tr(
-                        "z.B. Urlaub Sommer",
-                        "e.g. Summer trip"
-                      )}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-slate-300">
-                      {tr("Budget (optional)", "Budget (optional)")}
-                    </label>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <input
-                          className="flex-1 px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
-                          type="number"
-                          value={projectBudget}
-                          onChange={(e) => setProjectBudget(e.target.value)}
-                          placeholder={tr("z.B. 2500", "e.g. 2500")}
-                        />
-                        <select
-                          className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
-                          value={projectCurrency}
-                          onChange={(e) => {
-                            setProjectCurrency(e.target.value);
-                            if (e.target.value !== "CUSTOM") {
-                              setProjectCurrencyCustom("");
-                            }
-                          }}
-                        >
-                          <option value="EUR">EUR – Euro</option>
-                          <option value="USD">USD – US Dollar</option>
-                          <option value="THB">THB – Thai Baht</option>
-                          <option value="GBP">GBP – British Pound</option>
-                          <option value="CHF">CHF – Swiss Franc</option>
-                          <option value="JPY">JPY – Japanese Yen</option>
-                          <option value="AUD">AUD – Australian Dollar</option>
-                          <option value="CAD">CAD – Canadian Dollar</option>
-                          <option value="SEK">SEK – Swedish Krona</option>
-                          <option value="NOK">NOK – Norwegian Krone</option>
-                          <option value="DKK">DKK – Danish Krone</option>
-                          <option value="PLN">PLN – Polish Złoty</option>
-                          <option value="CZK">CZK – Czech Koruna</option>
-                          <option value="TRY">TRY – Turkish Lira</option>
-                          <option value="ZAR">ZAR – South African Rand</option>
-                          <option value="CUSTOM">
-                            {tr(
-                              "Andere / eigene Währung",
-                              "Other / custom currency"
-                            )}
-                          </option>
-                        </select>
-                      </div>
-                      {projectCurrency === "CUSTOM" && (
-                        <input
-                          className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
-                          value={projectCurrencyCustom}
-                          onChange={(e) =>
-                            setProjectCurrencyCustom(e.target.value)
-                          }
-                          placeholder={tr(
-                            "z.B. MXN, BRL, PHP",
-                            "e.g. MXN, BRL, PHP"
-                          )}
-                          maxLength={5}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    className="mt-2 w-full bg-emerald-600 hover:bg-emerald-500 text-sm font-medium py-1.5 rounded"
-                  >
-                    {tr("Projekt anlegen", "Create project")}
-                  </button>
-                </form>
-              </div>
-
-              {/* Schnellstart-Vorlagen */}
-              <div className="border-t border-slate-800 pt-3 space-y-2 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-300 font-semibold">
-                    {tr("Schnellstart-Vorlagen", "Quickstart templates")}
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    {tr(
-                      "Legt Beispiel-Projekte an, die du anpassen kannst.",
-                      "Creates example projects you can edit."
+            {/* Neues Projekt */}
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+              <h2 className="text-lg font-semibold mb-3">
+                {tr("Neues Projekt", "New project")}
+              </h2>
+              <form onSubmit={handleCreateProject} className="space-y-3 text-sm">
+                <div className="flex flex-col gap-1">
+                  <label className="text-slate-300">
+                    {tr("Name", "Name")}
+                  </label>
+                  <input
+                    className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder={tr(
+                      "z.B. Sommerurlaub 2026",
+                      "e.g. Summer trip 2026"
                     )}
-                  </span>
+                  />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => createTemplateProject("trip")}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px]"
-                  >
-                    {tr("Reise-Budget", "Trip budget")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => createTemplateProject("pcBuild")}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px]"
-                  >
-                    {tr("PC-Build", "PC build")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => createTemplateProject("household")}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px]"
-                  >
-                    {tr("Haushalt", "Household")}
-                  </button>
+                <div className="flex flex-col gap-1">
+                  <label className="text-slate-300">
+                    {tr("Budget (optional)", "Budget (optional)")}
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        type="number"
+                        value={projectBudget}
+                        onChange={(e) => setProjectBudget(e.target.value)}
+                        placeholder={tr("z.B. 2500", "e.g. 2500")}
+                      />
+                      <select
+                        className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        value={projectCurrency}
+                        onChange={(e) => {
+                          setProjectCurrency(e.target.value);
+                          if (e.target.value !== "CUSTOM") {
+                            setProjectCurrencyCustom("");
+                          }
+                        }}
+                      >
+                        <option value="EUR">EUR – Euro</option>
+                        <option value="USD">USD – US Dollar</option>
+                        <option value="THB">THB – Thai Baht</option>
+                        <option value="GBP">GBP – British Pound</option>
+                        <option value="CHF">CHF – Swiss Franc</option>
+                        <option value="JPY">JPY – Japanese Yen</option>
+                        <option value="AUD">AUD – Australian Dollar</option>
+                        <option value="CAD">CAD – Canadian Dollar</option>
+                        <option value="SEK">SEK – Swedish Krona</option>
+                        <option value="NOK">NOK – Norwegian Krone</option>
+                        <option value="DKK">DKK – Danish Krone</option>
+                        <option value="PLN">PLN – Polish Złoty</option>
+                        <option value="CZK">CZK – Czech Koruna</option>
+                        <option value="TRY">TRY – Turkish Lira</option>
+                        <option value="ZAR">ZAR – South African Rand</option>
+                        <option value="CUSTOM">
+                          {tr(
+                            "Andere / eigene Währung",
+                            "Other / custom currency"
+                          )}
+                        </option>
+                      </select>
+                    </div>
+                    {projectCurrency === "CUSTOM" && (
+                      <input
+                        className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        value={projectCurrencyCustom}
+                        onChange={(e) =>
+                          setProjectCurrencyCustom(e.target.value)
+                        }
+                        placeholder={tr(
+                          "z.B. MXN, BRL, PHP",
+                          "e.g. MXN, BRL, PHP"
+                        )}
+                        maxLength={5}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
+                <button
+                  type="submit"
+                  className="mt-2 w-full bg-emerald-600 hover:bg-emerald-500 text-sm font-medium py-1.5 rounded"
+                >
+                  {tr("Projekt anlegen", "Create project")}
+                </button>
+              </form>
             </div>
 
             {/* Projektliste */}
@@ -1185,9 +981,9 @@ export default function Home() {
 
             {selectedProject && (
               <>
-                {/* Projekt-Header + Quickstats */}
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                {/* Projekt-Header */}
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <h2 className="text-xl font-semibold mb-1">
                         {selectedProject.name}
@@ -1195,13 +991,12 @@ export default function Home() {
 
                       <form
                         onSubmit={handleUpdateProjectName}
-                        className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center text-xs mb-3"
+                        className="flex gap-2 items-center text-xs mb-3"
                       >
                         <input
                           className="flex-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
                           value={editProjectName}
                           onChange={(e) => setEditProjectName(e.target.value)}
-                          onKeyDown={handleProjectNameKeyDown}
                           placeholder={tr(
                             "Projektname ändern",
                             "Change project name"
@@ -1277,7 +1072,7 @@ export default function Home() {
                     </div>
 
                     {/* Budget & Currency bearbeiten */}
-                    <div className="text-xs text-right space-y-2 w-full md:w-44">
+                    <div className="text-xs text-right space-y-1 w-40">
                       <form
                         onSubmit={handleUpdateProjectMeta}
                         className="space-y-1"
@@ -1353,28 +1148,6 @@ export default function Home() {
                       </form>
                     </div>
                   </div>
-
-                  {/* Quickstats */}
-                  <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs">
-                    <div className="px-2 py-1 rounded bg-slate-800 border border-slate-700">
-                      {tr("Produkte gesamt", "Total items")}:{" "}
-                      <span className="font-semibold">{itemCount}</span>
-                    </div>
-                    <div className="px-2 py-1 rounded bg-slate-800 border border-slate-700">
-                      {tr("Offen", "Planned")}:{" "}
-                      <span className="font-semibold">{openCount}</span>
-                    </div>
-                    <div className="px-2 py-1 rounded bg-slate-800 border border-slate-700">
-                      {tr("Gekauft", "Purchased")}:{" "}
-                      <span className="font-semibold">{purchasedCount}</span>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    {tr(
-                      "Tipp: Im Edit-Modus speichert Enter, Escape bricht ab.",
-                      "Tip: In edit mode Enter saves, Escape cancels."
-                    )}
-                  </p>
                 </div>
 
                 {/* Neues Produkt */}
@@ -1395,8 +1168,8 @@ export default function Home() {
                         value={itemName}
                         onChange={(e) => setItemName(e.target.value)}
                         placeholder={tr(
-                          "z.B. Flug, Monitor, Miete",
-                          "e.g. Flight, monitor, rent"
+                          "z.B. Flug, Hotel, Monitor",
+                          "e.g. flight, hotel, monitor"
                         )}
                       />
                     </div>
@@ -1409,8 +1182,8 @@ export default function Home() {
                         value={itemShop}
                         onChange={(e) => setItemShop(e.target.value)}
                         placeholder={tr(
-                          "z.B. Airline, Amazon, Vermieter",
-                          "e.g. airline, Amazon, landlord"
+                          "z.B. Airline, Amazon...",
+                          "e.g. airline, Amazon..."
                         )}
                       />
                     </div>
@@ -1461,8 +1234,8 @@ export default function Home() {
                         value={itemNote}
                         onChange={(e) => setItemNote(e.target.value)}
                         placeholder={tr(
-                          "z.B. Alternativen, Bedingungen, Erinnerungen…",
-                          "e.g. alternatives, conditions, reminders…"
+                          "z.B. Alternative, nur bei Rabatt kaufen, Vergleichspreis...",
+                          "e.g. alternative, only if discounted, comparison price..."
                         )}
                       />
                     </div>
@@ -1671,13 +1444,6 @@ export default function Home() {
                                       onChange={(e) =>
                                         setEditItemName(e.target.value)
                                       }
-                                      onKeyDown={(e) =>
-                                        handleItemEditKeyDown(
-                                          e,
-                                          selectedProject.id,
-                                          item.id
-                                        )
-                                      }
                                     />
                                   ) : (
                                     <>
@@ -1698,13 +1464,6 @@ export default function Home() {
                                       onChange={(e) =>
                                         setEditItemShop(e.target.value)
                                       }
-                                      onKeyDown={(e) =>
-                                        handleItemEditKeyDown(
-                                          e,
-                                          selectedProject.id,
-                                          item.id
-                                        )
-                                      }
                                     />
                                   ) : (
                                     item.shopName
@@ -1718,13 +1477,6 @@ export default function Home() {
                                       value={editItemPrice}
                                       onChange={(e) =>
                                         setEditItemPrice(e.target.value)
-                                      }
-                                      onKeyDown={(e) =>
-                                        handleItemEditKeyDown(
-                                          e,
-                                          selectedProject.id,
-                                          item.id
-                                        )
                                       }
                                     />
                                   ) : (
@@ -1743,13 +1495,6 @@ export default function Home() {
                                       onChange={(e) =>
                                         setEditItemQuantity(e.target.value)
                                       }
-                                      onKeyDown={(e) =>
-                                        handleItemEditKeyDown(
-                                          e,
-                                          selectedProject.id,
-                                          item.id
-                                        )
-                                      }
                                     />
                                   ) : (
                                     item.quantity
@@ -1762,13 +1507,6 @@ export default function Home() {
                                       value={editItemNote}
                                       onChange={(e) =>
                                         setEditItemNote(e.target.value)
-                                      }
-                                      onKeyDown={(e) =>
-                                        handleItemEditKeyDown(
-                                          e,
-                                          selectedProject.id,
-                                          item.id
-                                        )
                                       }
                                     />
                                   ) : item.note ? (
@@ -1791,13 +1529,6 @@ export default function Home() {
                                         setEditItemUrl(e.target.value)
                                       }
                                       placeholder={tr("optional", "optional")}
-                                      onKeyDown={(e) =>
-                                        handleItemEditKeyDown(
-                                          e,
-                                          selectedProject.id,
-                                          item.id
-                                        )
-                                      }
                                     />
                                   ) : item.url ? (
                                     <a
@@ -1876,24 +1607,34 @@ export default function Home() {
           </div>
         </section>
 
+        {/* About / Footer */}
+        <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs text-slate-300">
+          <h2 className="text-sm font-semibold mb-2">
+            {tr("Über GatherCart", "About GatherCart")}
+          </h2>
+          <p className="mb-2">
+            {tr(
+              "GatherCart ist ein kleines, lokales Budget- und Planungs-Tool. Alle Daten bleiben in deinem Browser und werden nicht auf einen Server hochgeladen.",
+              "GatherCart is a small local budgeting & planning tool. All data stays in your browser and is not uploaded to any server."
+            )}
+          </p>
+          <p>
+            {tr(
+              "Nutze es z.B. für Urlaube, Hardware-Builds, Umzüge oder einfach deine persönliche Wunschliste.",
+              "Use it for trips, hardware builds, moving, or just your personal wishlist."
+            )}
+          </p>
+        </section>
+
         {/* Footer / Signatur */}
-        <footer className="mt-4 border-t border-slate-800 pt-3 text-[11px] text-slate-500 text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
-          <span>
-            GatherCart ·{" "}
-            {tr("Konzept & Umsetzung", "Concept & implementation")}{" "}
-            <span className="font-semibold text-slate-300">Lownax</span>
-          </span>
-          <span className="hidden sm:inline">•</span>
-          <a
-            href="#howto"
-            className="text-slate-400 hover:text-emerald-400 underline-offset-2 hover:underline"
-          >
-            {tr("Kurze Anleitung anzeigen", "Show quick how-to")}
-          </a>
+        <footer className="mt-1 border-t border-slate-800 pt-3 text-[11px] text-slate-500 text-center">
+          GatherCart · {tr("Konzept & Umsetzung", "Concept & implementation")}{" "}
+          <span className="font-semibold text-slate-300">Lownax</span>
         </footer>
       </div>
     </main>
   );
 }
+
 
 
