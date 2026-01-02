@@ -96,6 +96,7 @@ export default function Home() {
     if (raw) {
       try {
         const saved: Project[] = JSON.parse(raw);
+        // Fallback: falls alte Daten keine currency haben
         const normalized = saved.map((p) => ({
           ...p,
           currency: p.currency || "EUR",
@@ -357,6 +358,13 @@ export default function Home() {
     purchasedPercent = (totalPurchased / selectedProject.budget) * 100;
   }
 
+  // Item-Statistiken
+  const totalItems = selectedProject?.items.length ?? 0;
+  const openItems =
+    selectedProject?.items.filter((i) => i.status === "planned").length ?? 0;
+  const purchasedItems =
+    selectedProject?.items.filter((i) => i.status === "purchased").length ?? 0;
+
   async function handleCopyProjectList() {
     if (!selectedProject) return;
 
@@ -525,6 +533,73 @@ export default function Home() {
     setSelectedProjectId(newProjectId);
   }
 
+  // Export / Import / Reset
+  function handleExport() {
+    const data = {
+      version: 1,
+      projects,
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gathercart-data.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const parsed = JSON.parse(text);
+        let importedProjects: Project[];
+
+        if (Array.isArray(parsed)) {
+          importedProjects = parsed;
+        } else if (parsed && Array.isArray(parsed.projects)) {
+          importedProjects = parsed.projects;
+        } else {
+          throw new Error("Ungültiges Format");
+        }
+
+        const normalized = importedProjects.map((p, pi) => ({
+          ...p,
+          id: p.id ?? pi + 1,
+          currency: p.currency || "EUR",
+          items: (p.items || []).map((item: any, index: number) => ({
+            ...item,
+            id: item.id ?? index + 1,
+          })),
+        }));
+
+        setProjects(normalized);
+        setSelectedProjectId(normalized[0]?.id ?? null);
+        e.target.value = "";
+        alert(
+          language === "de"
+            ? "Daten erfolgreich importiert."
+            : "Data imported successfully."
+        );
+      } catch (err) {
+        console.error(err);
+        alert(
+          language === "de"
+            ? "Import fehlgeschlagen. Datei ungültig?"
+            : "Import failed. Invalid file?"
+        );
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function handleResetAll() {
     const ok = window.confirm(
       language === "de"
@@ -541,21 +616,21 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-4">
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-4">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
-        <header className="border-b border-slate-800 pb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <header className="border-b border-slate-800 pb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {/* „Panther“-Logo (neutral gehalten) */}
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
-              <span className="text-xl sm:text-2xl" aria-hidden="true">
+            <div className="w-11 h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+              <span className="text-2xl" aria-hidden="true">
                 🐈‍⬛
               </span>
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
                 GatherCart{" "}
-                <span className="text-slate-400 text-xs sm:text-sm font-normal">
+                <span className="text-slate-400 text-sm font-normal">
                   {tr("V1 – lokal", "V1 – local")}
                 </span>
               </h1>
@@ -565,15 +640,17 @@ export default function Home() {
                   "Data stays in this browser"
                 )}
               </span>
-              <span className="block text-[11px] text-slate-500 mt-1">
+              <span className="block text-xs text-slate-500 mt-1">
                 {tr("Erstellt von", "Created by")}{" "}
                 <span className="font-semibold text-slate-200">Lownax</span>
               </span>
             </div>
           </div>
 
-          <div className="flex flex-col items-start sm:items-end gap-1 text-xs">
-            <span className="text-slate-400">{tr("Sprache", "Language")}</span>
+          <div className="flex flex-col items-end gap-1 text-xs">
+            <span className="text-slate-400">
+              {tr("Sprache", "Language")}
+            </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setLanguage("de")}
@@ -605,21 +682,21 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Kurze Beschreibung */}
+        {/* Intro / Beschreibung */}
         <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm space-y-2">
-          <h2 className="text-base sm:text-lg font-semibold">
+          <h2 className="text-lg font-semibold">
             {tr("Was ist GatherCart?", "What is GatherCart?")}
           </h2>
-          <p className="text-slate-300">
+          <p className="text-slate-200">
             {tr(
-              "GatherCart hilft dir, Projekte zu planen – ganz egal ob Urlaub, neuer PC-Build, Wohnungseinrichtung oder einfach eine größere Shopping-Liste.",
-              "GatherCart helps you plan projects – whether it’s a vacation, new PC build, home setup, or just a bigger shopping list."
+              "GatherCart hilft dir, Projekte zu planen – egal ob Urlaub, neuer PC, Wohnungseinrichtung oder einfach eine größere Shopping-Liste.",
+              "GatherCart helps you plan projects – whether it's a trip, a new PC build, furnishing an apartment or just a bigger shopping list."
             )}
           </p>
-          <p className="text-slate-400 text-xs sm:text-sm">
+          <p className="text-slate-300">
             {tr(
               "Lege Projekte an, erfasse Produkte mit Preis, Shop, Link und Notizen, markiere sie als gekauft und behalte dein Budget im Blick. Alles bleibt lokal in deinem Browser gespeichert.",
-              "Create projects, add items with price, shop, link and notes, mark them as purchased and keep an eye on your budget. Everything stays locally in your browser."
+              "Create projects, track items with price, shop, link and notes, mark them as purchased and keep an eye on your budget. Everything stays local in your browser."
             )}
           </p>
         </section>
@@ -631,19 +708,7 @@ export default function Home() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => {
-                const data = { version: 1, projects };
-                const json = JSON.stringify(data, null, 2);
-                const blob = new Blob([json], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "gathercart-data.json";
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-              }}
+              onClick={handleExport}
               className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700"
             >
               {tr("Exportieren", "Export")}
@@ -654,54 +719,7 @@ export default function Home() {
                 type="file"
                 accept="application/json"
                 className="hidden"
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    try {
-                      const text = ev.target?.result as string;
-                      const parsed = JSON.parse(text);
-                      let importedProjects: Project[];
-
-                      if (Array.isArray(parsed)) {
-                        importedProjects = parsed;
-                      } else if (parsed && Array.isArray(parsed.projects)) {
-                        importedProjects = parsed.projects;
-                      } else {
-                        throw new Error("Ungültiges Format");
-                      }
-
-                      const normalized = importedProjects.map((p, pi) => ({
-                        ...p,
-                        id: p.id ?? pi + 1,
-                        currency: p.currency || "EUR",
-                        items: (p.items || []).map((item: any, index: number) => ({
-                          ...item,
-                          id: item.id ?? index + 1,
-                        })),
-                      }));
-
-                      setProjects(normalized);
-                      setSelectedProjectId(normalized[0]?.id ?? null);
-                      e.target.value = "";
-                      alert(
-                        language === "de"
-                          ? "Daten erfolgreich importiert."
-                          : "Data imported successfully."
-                      );
-                    } catch (err) {
-                      console.error(err);
-                      alert(
-                        language === "de"
-                          ? "Import fehlgeschlagen. Datei ungültig?"
-                          : "Import failed. Invalid file?"
-                      );
-                    }
-                  };
-                  reader.readAsText(file);
-                }}
+                onChange={handleImport}
               />
             </label>
             <button
@@ -892,7 +910,7 @@ export default function Home() {
 
                       <form
                         onSubmit={handleUpdateProjectName}
-                        className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center text-xs mb-3"
+                        className="flex gap-2 items-center text-xs mb-3"
                       >
                         <input
                           className="flex-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
@@ -972,8 +990,8 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Budget & Currency bearbeiten (Desktop) */}
-                    <div className="text-xs text-right space-y-1 w-40 hidden sm:block">
+                    {/* Budget & Currency bearbeiten */}
+                    <div className="text-xs text-right space-y-1 w-40">
                       <form
                         onSubmit={handleUpdateProjectMeta}
                         className="space-y-1"
@@ -1069,8 +1087,8 @@ export default function Home() {
                         value={itemName}
                         onChange={(e) => setItemName(e.target.value)}
                         placeholder={tr(
-                          "z.B. Monitor 27 Zoll",
-                          "e.g. 27\" monitor"
+                          "z.B. Flug, Hotel, Monitor...",
+                          "e.g. flight, hotel, monitor..."
                         )}
                       />
                     </div>
@@ -1083,8 +1101,8 @@ export default function Home() {
                         value={itemShop}
                         onChange={(e) => setItemShop(e.target.value)}
                         placeholder={tr(
-                          "z.B. Amazon, MediaMarkt...",
-                          "e.g. Amazon, local shop..."
+                          "z.B. Airline, Amazon...",
+                          "e.g. airline, Amazon..."
                         )}
                       />
                     </div>
@@ -1111,7 +1129,7 @@ export default function Home() {
                         type="number"
                         value={itemPrice}
                         onChange={(e) => setItemPrice(e.target.value)}
-                        placeholder={tr("z.B. 199", "e.g. 199")}
+                        placeholder={tr("z.B. 980", "e.g. 980")}
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -1135,8 +1153,8 @@ export default function Home() {
                         value={itemNote}
                         onChange={(e) => setItemNote(e.target.value)}
                         placeholder={tr(
-                          "z.B. Alternative Produktidee, Lieferzeit, Variante...",
-                          "e.g. alternative product, delivery time, variant..."
+                          "z.B. Stornobedingungen, Alternativen...",
+                          "e.g. cancellation rules, alternatives..."
                         )}
                       />
                     </div>
@@ -1154,8 +1172,17 @@ export default function Home() {
                 {/* Produktliste */}
                 <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                    <h3 className="text-lg font-semibold">
-                      {tr("Produkte im Projekt", "Items in project")}
+                    <h3 className="text-lg font-semibold flex flex-wrap items-baseline gap-2">
+                      <span>
+                        {tr("Produkte im Projekt", "Items in project")}
+                      </span>
+                      {selectedProject && (
+                        <span className="text-xs font-normal text-slate-400">
+                          {totalItems} {tr("insgesamt", "total")} · {openItems}{" "}
+                          {tr("offen", "open")} · {purchasedItems}{" "}
+                          {tr("gekauft", "purchased")}
+                        </span>
+                      )}
                     </h3>
                     <div className="flex flex-col items-end gap-2 text-xs">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1284,7 +1311,7 @@ export default function Home() {
 
                   {filteredItems.length > 0 && (
                     <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm border-collapse">
+                      <table className="w-full text-sm border-collapse">
                         <thead>
                           <tr className="border-b border-slate-700">
                             <th className="text-left py-1 pr-2">✓</th>
