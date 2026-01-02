@@ -8,6 +8,7 @@ type ItemPriority = "must" | "nice";
 type Lang = "de" | "en";
 type ItemFilter = "all" | "planned" | "purchased";
 type ItemSort = "createdDesc" | "priceAsc" | "nameAsc";
+type PriorityFilter = "all" | "must" | "nice";
 
 interface Item {
   id: number;
@@ -41,6 +42,8 @@ export default function Home() {
   const [itemFilter, setItemFilter] = useState<ItemFilter>("all");
   const [itemSort, setItemSort] = useState<ItemSort>("createdDesc");
   const [categoryFilter, setCategoryFilter] = useState<string>(CATEGORY_ALL);
+  const [priorityFilter, setPriorityFilter] =
+    useState<PriorityFilter>("all");
 
   const tr = (de: string, en: string) => (language === "de" ? de : en);
 
@@ -147,6 +150,7 @@ export default function Home() {
     }
     cancelEditItem();
     setCategoryFilter(CATEGORY_ALL);
+    setPriorityFilter("all");
   }, [projects, selectedProjectId]);
 
   const selectedProject =
@@ -373,7 +377,19 @@ export default function Home() {
     return { totalPlanned, totalPurchased };
   }
 
+  function getPriorityTotals(project: Project | null) {
+    if (!project) return { mustTotal: 0, niceTotal: 0 };
+    const mustTotal = project.items
+      .filter((i) => (i.priority ?? "must") === "must")
+      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const niceTotal = project.items
+      .filter((i) => (i.priority ?? "must") === "nice")
+      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    return { mustTotal, niceTotal };
+  }
+
   const { totalPlanned, totalPurchased } = getTotals(selectedProject);
+  const { mustTotal, niceTotal } = getPriorityTotals(selectedProject);
 
   let plannedPercent: number | null = null;
   let purchasedPercent: number | null = null;
@@ -418,6 +434,26 @@ export default function Home() {
         : "Marked as purchased: ") +
         `${totalPurchased.toFixed(2)} ${currency}`
     );
+
+    // Priority Summaries in Export
+    if (mustTotal > 0 || niceTotal > 0) {
+      if (language === "de") {
+        lines.push(
+          `Pflichtkäufe: ${mustTotal.toFixed(
+            2
+          )} ${currency}, Wünsche/optional: ${niceTotal.toFixed(
+            2
+          )} ${currency}`
+        );
+      } else {
+        lines.push(
+          `Must-have: ${mustTotal.toFixed(
+            2
+          )} ${currency}, Nice-to-have: ${niceTotal.toFixed(2)} ${currency}`
+        );
+      }
+    }
+
     lines.push("");
 
     lines.push(language === "de" ? "Produkte:" : "Items:");
@@ -446,7 +482,7 @@ export default function Home() {
       const priorityPart = item.priority
         ? language === "de"
           ? ` – Priorität: ${
-              item.priority === "must" ? "Muss" : "Nice-to-have"
+              item.priority === "must" ? "Pflichtkauf" : "Wunsch/optional"
             }`
           : ` – Priority: ${
               item.priority === "must" ? "Must have" : "Nice to have"
@@ -533,7 +569,7 @@ export default function Home() {
   const purchasedPercentClamped =
     purchasedPercent != null ? Math.min(purchasedPercent, 150) : null;
 
-  // Items nach Filter + Sortierung (Status + Kategorie)
+  // Items nach Filter + Sortierung (Status + Kategorie + Priorität)
   const filteredItems =
     selectedProject?.items
       .filter((item) => {
@@ -550,6 +586,11 @@ export default function Home() {
               : CATEGORY_NONE;
           if (key !== categoryFilter) return false;
         }
+
+        // Prioritäts-Filter
+        const effPriority: ItemPriority = item.priority ?? "must";
+        if (priorityFilter === "must" && effPriority !== "must") return false;
+        if (priorityFilter === "nice" && effPriority !== "nice") return false;
 
         return true;
       })
@@ -581,6 +622,14 @@ export default function Home() {
           : p
       )
     );
+  }
+
+  // Quick-View: Must-haves günstig zuerst
+  function quickShowCheapMustHaves() {
+    setPriorityFilter("must");
+    setItemFilter("all");
+    setItemSort("priceAsc");
+    setCategoryFilter(CATEGORY_ALL);
   }
 
   // Projekt duplizieren
@@ -660,6 +709,7 @@ export default function Home() {
         setProjects(normalized);
         setSelectedProjectId(normalized[0]?.id ?? null);
         setCategoryFilter(CATEGORY_ALL);
+        setPriorityFilter("all");
         e.target.value = "";
         alert(
           language === "de"
@@ -689,6 +739,7 @@ export default function Home() {
     setProjects([]);
     setSelectedProjectId(null);
     setCategoryFilter(CATEGORY_ALL);
+    setPriorityFilter("all");
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(STORAGE_KEY);
     }
@@ -1010,6 +1061,21 @@ export default function Home() {
                             {selectedProject.currency}
                           </span>
                         </p>
+                        {mustTotal > 0 || niceTotal > 0 ? (
+                          <p className="text-xs text-slate-300">
+                            {language === "de"
+                              ? `Davon Pflichtkäufe: ${mustTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}, Wünsche/optional: ${niceTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}.`
+                              : `Of that, must-have: ${mustTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}, nice-to-have: ${niceTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}.`}
+                          </p>
+                        ) : null}
                         {selectedProject.budget != null && (
                           <>
                             <p>
@@ -1187,6 +1253,31 @@ export default function Home() {
                           </div>
                         )}
 
+                      {/* Priority-Summary als Mini-Statistik */}
+                      {(mustTotal > 0 || niceTotal > 0) && (
+                        <div className="space-y-1">
+                          <span className="text-slate-300">
+                            {tr(
+                              "Verteilung Pflicht/Wunsch",
+                              "Must vs. wish overview"
+                            )}
+                          </span>
+                          <p className="text-slate-300">
+                            {language === "de"
+                              ? `Pflichtkäufe: ${mustTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}, Wünsche/optional: ${niceTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}.`
+                              : `Must-have: ${mustTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}, nice-to-have: ${niceTotal.toFixed(
+                                  2
+                                )} ${selectedProject.currency}.`}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Kategorien-Diagramm */}
                       {categoryEntries.length > 0 && (
                         <div className="space-y-2">
@@ -1297,10 +1388,10 @@ export default function Home() {
                         }
                       >
                         <option value="must">
-                          {tr("Muss ich haben", "Must have")}
+                          {tr("Pflichtkauf", "Must have")}
                         </option>
                         <option value="nice">
-                          {tr("Nice-to-have", "Nice to have")}
+                          {tr("Wunsch / optional", "Nice to have")}
                         </option>
                       </select>
                     </div>
@@ -1374,6 +1465,7 @@ export default function Home() {
                       {tr("Produkte im Projekt", "Items in project")}
                     </h3>
                     <div className="flex flex-col items-end gap-2 text-xs">
+                      {/* Status-Filter */}
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-slate-300">
                           {tr("Filter:", "Filter:")}
@@ -1410,7 +1502,7 @@ export default function Home() {
                         </button>
                       </div>
 
-                      {/* Kategorie-Filter */}
+                      {/* Kategorien-Filter */}
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-slate-300">
                           {tr("Kategorie:", "Category:")}
@@ -1431,6 +1523,44 @@ export default function Home() {
                         </select>
                       </div>
 
+                      {/* Prioritäts-Filter */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-slate-300">
+                          {tr("Priorität:", "Priority:")}
+                        </span>
+                        <button
+                          onClick={() => setPriorityFilter("all")}
+                          className={`px-2 py-0.5 rounded border ${
+                            priorityFilter === "all"
+                              ? "bg-slate-100 text-slate-900 border-slate-100"
+                              : "bg-slate-900 border-slate-700 text-slate-200"
+                          }`}
+                        >
+                          {tr("Alle", "All")}
+                        </button>
+                        <button
+                          onClick={() => setPriorityFilter("must")}
+                          className={`px-2 py-0.5 rounded border ${
+                            priorityFilter === "must"
+                              ? "bg-slate-100 text-slate-900 border-slate-100"
+                              : "bg-slate-900 border-slate-700 text-slate-200"
+                          }`}
+                        >
+                          {tr("Pflicht", "Must")}
+                        </button>
+                        <button
+                          onClick={() => setPriorityFilter("nice")}
+                          className={`px-2 py-0.5 rounded border ${
+                            priorityFilter === "nice"
+                              ? "bg-slate-100 text-slate-900 border-slate-100"
+                              : "bg-slate-900 border-slate-700 text-slate-200"
+                          }`}
+                        >
+                          {tr("Wunsch", "Nice")}
+                        </button>
+                      </div>
+
+                      {/* Sortierung */}
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-slate-300">
                           {tr("Sortierung:", "Sort:")}
@@ -1466,6 +1596,8 @@ export default function Home() {
                           {tr("Name A–Z", "Name A–Z")}
                         </button>
                       </div>
+
+                      {/* Status-Aktionen */}
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-slate-300">
                           {tr("Status-Aktionen:", "Status actions:")}
@@ -1483,6 +1615,24 @@ export default function Home() {
                           {tr("Alle gekauft", "All purchased")}
                         </button>
                       </div>
+
+                      {/* Budget-Helfer */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-slate-300">
+                          {tr("Budget-Helfer:", "Budget helper:")}
+                        </span>
+                        <button
+                          onClick={quickShowCheapMustHaves}
+                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700"
+                        >
+                          {tr(
+                            "Must-haves günstig zuerst",
+                            "Must-haves cheapest first"
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Copy-Button */}
                       <div className="flex items-center gap-2">
                         {selectedProject.items.length > 0 && (
                           <button
@@ -1648,24 +1798,24 @@ export default function Home() {
                                     >
                                       <option value="must">
                                         {tr(
-                                          "Muss ich haben",
+                                          "Pflichtkauf",
                                           "Must have"
                                         )}
                                       </option>
                                       <option value="nice">
                                         {tr(
-                                          "Nice-to-have",
+                                          "Wunsch / optional",
                                           "Nice to have"
                                         )}
                                       </option>
                                     </select>
                                   ) : item.priority === "nice" ? (
                                     <span className="text-amber-300">
-                                      {tr("Nice-to-have", "Nice to have")}
+                                      {tr("Wunsch", "Nice to have")}
                                     </span>
                                   ) : (
                                     <span className="text-emerald-300">
-                                      {tr("Muss", "Must")}
+                                      {tr("Pflicht", "Must")}
                                     </span>
                                   )}
                                 </td>
