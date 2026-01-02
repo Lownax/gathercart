@@ -541,7 +541,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-4 overflow-x-hidden">
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-4">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
         <header className="border-b border-slate-800 pb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -972,7 +972,7 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Budget & Currency bearbeiten */}
+                    {/* Budget & Currency bearbeiten (Desktop) */}
                     <div className="text-xs text-right space-y-1 w-40 hidden sm:block">
                       <form
                         onSubmit={handleUpdateProjectMeta}
@@ -1283,7 +1283,7 @@ export default function Home() {
                     )}
 
                   {filteredItems.length > 0 && (
-                    <div className="-mx-4 sm:mx-0 overflow-x-auto">
+                    <div className="overflow-x-auto">
                       <table className="min-w-full text-sm border-collapse">
                         <thead>
                           <tr className="border-b border-slate-700">
