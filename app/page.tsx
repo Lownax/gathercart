@@ -96,7 +96,6 @@ export default function Home() {
     if (raw) {
       try {
         const saved: Project[] = JSON.parse(raw);
-        // Fallback: falls alte Daten keine currency haben
         const normalized = saved.map((p) => ({
           ...p,
           currency: p.currency || "EUR",
@@ -188,7 +187,9 @@ export default function Home() {
 
     setProjects((prev) =>
       prev.map((p) =>
-        p.id === selectedProject.id ? { ...p, items: [...p.items, newItem] } : p
+        p.id === selectedProject.id
+          ? { ...p, items: [...p.items, newItem] }
+          : p
       )
     );
 
@@ -524,73 +525,6 @@ export default function Home() {
     setSelectedProjectId(newProjectId);
   }
 
-  // Export / Import / Reset
-  function handleExport() {
-    const data = {
-      version: 1,
-      projects,
-    };
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "gathercart-data.json";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const text = ev.target?.result as string;
-        const parsed = JSON.parse(text);
-        let importedProjects: Project[];
-
-        if (Array.isArray(parsed)) {
-          importedProjects = parsed;
-        } else if (parsed && Array.isArray(parsed.projects)) {
-          importedProjects = parsed.projects;
-        } else {
-          throw new Error("Ungültiges Format");
-        }
-
-        const normalized = importedProjects.map((p, pi) => ({
-          ...p,
-          id: p.id ?? pi + 1,
-          currency: p.currency || "EUR",
-          items: (p.items || []).map((item: any, index: number) => ({
-            ...item,
-            id: item.id ?? index + 1,
-          })),
-        }));
-
-        setProjects(normalized);
-        setSelectedProjectId(normalized[0]?.id ?? null);
-        e.target.value = "";
-        alert(
-          language === "de"
-            ? "Daten erfolgreich importiert."
-            : "Data imported successfully."
-        );
-      } catch (err) {
-        console.error(err);
-        alert(
-          language === "de"
-            ? "Import fehlgeschlagen. Datei ungültig?"
-            : "Import failed. Invalid file?"
-        );
-      }
-    };
-    reader.readAsText(file);
-  }
-
   function handleResetAll() {
     const ok = window.confirm(
       language === "de"
@@ -607,7 +541,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-4">
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-4 overflow-x-hidden">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
         <header className="border-b border-slate-800 pb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -631,12 +565,6 @@ export default function Home() {
                   "Data stays in this browser"
                 )}
               </span>
-              <span className="block text-xs text-slate-400 mt-1">
-                {tr(
-                  "Plane und sammle Produkte für Reisen, Setups, Umzüge, Events und mehr.",
-                  "Plan and organize items for trips, setups, moves, events and more."
-                )}
-              </span>
               <span className="block text-[11px] text-slate-500 mt-1">
                 {tr("Erstellt von", "Created by")}{" "}
                 <span className="font-semibold text-slate-200">Lownax</span>
@@ -644,10 +572,8 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1 text-xs">
-            <span className="text-slate-400">
-              {tr("Sprache", "Language")}
-            </span>
+          <div className="flex flex-col items-start sm:items-end gap-1 text-xs">
+            <span className="text-slate-400">{tr("Sprache", "Language")}</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setLanguage("de")}
@@ -679,6 +605,25 @@ export default function Home() {
           </div>
         </header>
 
+        {/* Kurze Beschreibung */}
+        <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm space-y-2">
+          <h2 className="text-base sm:text-lg font-semibold">
+            {tr("Was ist GatherCart?", "What is GatherCart?")}
+          </h2>
+          <p className="text-slate-300">
+            {tr(
+              "GatherCart hilft dir, Projekte zu planen – ganz egal ob Urlaub, neuer PC-Build, Wohnungseinrichtung oder einfach eine größere Shopping-Liste.",
+              "GatherCart helps you plan projects – whether it’s a vacation, new PC build, home setup, or just a bigger shopping list."
+            )}
+          </p>
+          <p className="text-slate-400 text-xs sm:text-sm">
+            {tr(
+              "Lege Projekte an, erfasse Produkte mit Preis, Shop, Link und Notizen, markiere sie als gekauft und behalte dein Budget im Blick. Alles bleibt lokal in deinem Browser gespeichert.",
+              "Create projects, add items with price, shop, link and notes, mark them as purchased and keep an eye on your budget. Everything stays locally in your browser."
+            )}
+          </p>
+        </section>
+
         {/* Daten-Tools: Export / Import / Reset */}
         <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs flex flex-wrap gap-3 items-center justify-between">
           <div className="font-semibold text-slate-200">
@@ -686,7 +631,19 @@ export default function Home() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={handleExport}
+              onClick={() => {
+                const data = { version: 1, projects };
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "gathercart-data.json";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+              }}
               className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700"
             >
               {tr("Exportieren", "Export")}
@@ -697,7 +654,54 @@ export default function Home() {
                 type="file"
                 accept="application/json"
                 className="hidden"
-                onChange={handleImport}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    try {
+                      const text = ev.target?.result as string;
+                      const parsed = JSON.parse(text);
+                      let importedProjects: Project[];
+
+                      if (Array.isArray(parsed)) {
+                        importedProjects = parsed;
+                      } else if (parsed && Array.isArray(parsed.projects)) {
+                        importedProjects = parsed.projects;
+                      } else {
+                        throw new Error("Ungültiges Format");
+                      }
+
+                      const normalized = importedProjects.map((p, pi) => ({
+                        ...p,
+                        id: p.id ?? pi + 1,
+                        currency: p.currency || "EUR",
+                        items: (p.items || []).map((item: any, index: number) => ({
+                          ...item,
+                          id: item.id ?? index + 1,
+                        })),
+                      }));
+
+                      setProjects(normalized);
+                      setSelectedProjectId(normalized[0]?.id ?? null);
+                      e.target.value = "";
+                      alert(
+                        language === "de"
+                          ? "Daten erfolgreich importiert."
+                          : "Data imported successfully."
+                      );
+                    } catch (err) {
+                      console.error(err);
+                      alert(
+                        language === "de"
+                          ? "Import fehlgeschlagen. Datei ungültig?"
+                          : "Import failed. Invalid file?"
+                      );
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
               />
             </label>
             <button
@@ -727,8 +731,8 @@ export default function Home() {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder={tr(
-                      "z.B. PC-Setup, Wohnzimmer-Makeover, Sommerurlaub",
-                      "e.g. PC setup, living room makeover, summer trip"
+                      "z.B. Sommerurlaub 2026",
+                      "e.g. Summer vacation 2026"
                     )}
                   />
                 </div>
@@ -888,7 +892,7 @@ export default function Home() {
 
                       <form
                         onSubmit={handleUpdateProjectName}
-                        className="flex gap-2 items-center text-xs mb-3"
+                        className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center text-xs mb-3"
                       >
                         <input
                           className="flex-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
@@ -969,7 +973,7 @@ export default function Home() {
                     </div>
 
                     {/* Budget & Currency bearbeiten */}
-                    <div className="text-xs text-right space-y-1 w-40">
+                    <div className="text-xs text-right space-y-1 w-40 hidden sm:block">
                       <form
                         onSubmit={handleUpdateProjectMeta}
                         className="space-y-1"
@@ -1065,8 +1069,8 @@ export default function Home() {
                         value={itemName}
                         onChange={(e) => setItemName(e.target.value)}
                         placeholder={tr(
-                          "z.B. Flug, Hotel, Monitor, Kamera",
-                          "e.g. flight, hotel, monitor, camera"
+                          "z.B. Monitor 27 Zoll",
+                          "e.g. 27\" monitor"
                         )}
                       />
                     </div>
@@ -1079,8 +1083,8 @@ export default function Home() {
                         value={itemShop}
                         onChange={(e) => setItemShop(e.target.value)}
                         placeholder={tr(
-                          "z.B. MediaMarkt, Amazon, Airline...",
-                          "e.g. Amazon, local store, airline..."
+                          "z.B. Amazon, MediaMarkt...",
+                          "e.g. Amazon, local shop..."
                         )}
                       />
                     </div>
@@ -1107,7 +1111,7 @@ export default function Home() {
                         type="number"
                         value={itemPrice}
                         onChange={(e) => setItemPrice(e.target.value)}
-                        placeholder={tr("z.B. 980", "e.g. 980")}
+                        placeholder={tr("z.B. 199", "e.g. 199")}
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -1131,8 +1135,8 @@ export default function Home() {
                         value={itemNote}
                         onChange={(e) => setItemNote(e.target.value)}
                         placeholder={tr(
-                          "z.B. Rabattcode, Lieferzeit, Alternativen...",
-                          "e.g. discount code, delivery time, alternatives..."
+                          "z.B. Alternative Produktidee, Lieferzeit, Variante...",
+                          "e.g. alternative product, delivery time, variant..."
                         )}
                       />
                     </div>
@@ -1279,8 +1283,8 @@ export default function Home() {
                     )}
 
                   {filteredItems.length > 0 && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm border-collapse">
+                    <div className="-mx-4 sm:mx-0 overflow-x-auto">
+                      <table className="min-w-full text-sm border-collapse">
                         <thead>
                           <tr className="border-b border-slate-700">
                             <th className="text-left py-1 pr-2">✓</th>
