@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type React from "react";
 
 type ItemStatus = "planned" | "purchased";
+type ItemPriority = "must" | "nice";
 type Lang = "de" | "en";
 type ItemFilter = "all" | "planned" | "purchased";
 type ItemSort = "createdDesc" | "priceAsc" | "nameAsc";
@@ -18,6 +19,8 @@ interface Item {
   status: ItemStatus;
   createdAt?: string;
   note?: string;
+  category?: string;
+  priority?: ItemPriority;
 }
 
 interface Project {
@@ -30,14 +33,14 @@ interface Project {
 
 const STORAGE_KEY = "gathercart-projects-v1";
 const LANGUAGE_KEY = "gathercart-language-v1";
-const SELECTED_PROJECT_KEY = "gathercart-selected-project-v1";
-const THEME_KEY = "gathercart-theme-v1";
+const CATEGORY_ALL = "ALL";
+const CATEGORY_NONE = "__NO_CATEGORY__";
 
 export default function Home() {
   const [language, setLanguage] = useState<Lang>("de");
   const [itemFilter, setItemFilter] = useState<ItemFilter>("all");
   const [itemSort, setItemSort] = useState<ItemSort>("createdDesc");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [categoryFilter, setCategoryFilter] = useState<string>(CATEGORY_ALL);
 
   const tr = (de: string, en: string) => (language === "de" ? de : en);
 
@@ -59,6 +62,8 @@ export default function Home() {
   const [itemPrice, setItemPrice] = useState("");
   const [itemQuantity, setItemQuantity] = useState("1");
   const [itemNote, setItemNote] = useState("");
+  const [itemCategory, setItemCategory] = useState("");
+  const [itemPriority, setItemPriority] = useState<ItemPriority>("must");
 
   // Projekt bearbeiten
   const [editProjectName, setEditProjectName] = useState("");
@@ -74,6 +79,9 @@ export default function Home() {
   const [editItemPrice, setEditItemPrice] = useState("");
   const [editItemQuantity, setEditItemQuantity] = useState("");
   const [editItemNote, setEditItemNote] = useState("");
+  const [editItemCategory, setEditItemCategory] = useState("");
+  const [editItemPriority, setEditItemPriority] =
+    useState<ItemPriority>("must");
 
   const [copyFeedback, setCopyFeedback] = useState("");
 
@@ -92,57 +100,24 @@ export default function Home() {
     window.localStorage.setItem(LANGUAGE_KEY, language);
   }, [language]);
 
-  // Theme laden
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem(THEME_KEY);
-    if (saved === "dark" || saved === "light") {
-      setTheme(saved);
-    }
-  }, []);
-
-  // Theme anwenden (HTML-Root-Klasse + speichern)
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    root.classList.remove("theme-dark", "theme-light");
-    root.classList.add(theme === "dark" ? "theme-dark" : "theme-light");
-    window.localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
-
-  // Projekte + zuletzt gewähltes Projekt laden
+  // Projekte laden
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    let normalized: Project[] = [];
-
     if (raw) {
       try {
         const saved: Project[] = JSON.parse(raw);
-        normalized = saved.map((p) => ({
+        const normalized = saved.map((p) => ({
           ...p,
           currency: p.currency || "EUR",
         }));
         setProjects(normalized);
+        if (normalized.length > 0) {
+          setSelectedProjectId(normalized[0].id);
+        }
       } catch (err) {
         console.error("Konnte gespeicherte Projekte nicht laden:", err);
       }
-    }
-
-    // Versuche zuletzt genutztes Projekt wiederherzustellen
-    const storedSelected = window.localStorage.getItem(SELECTED_PROJECT_KEY);
-    if (storedSelected && normalized.length > 0) {
-      const idNum = Number(storedSelected);
-      const found = normalized.find((p) => p.id === idNum);
-      if (found) {
-        setSelectedProjectId(found.id);
-        return;
-      }
-    }
-
-    // Fallback: erstes Projekt auswählen
-    if (normalized.length > 0) {
-      setSelectedProjectId(normalized[0].id);
     }
   }, []);
 
@@ -155,19 +130,6 @@ export default function Home() {
       console.error("Konnte Projekte nicht speichern:", err);
     }
   }, [projects]);
-
-  // Auswahl des Projekts in localStorage merken
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (selectedProjectId != null) {
-      window.localStorage.setItem(
-        SELECTED_PROJECT_KEY,
-        String(selectedProjectId)
-      );
-    } else {
-      window.localStorage.removeItem(SELECTED_PROJECT_KEY);
-    }
-  }, [selectedProjectId]);
 
   // Edit-Felder syncen bei Projektwechsel
   useEffect(() => {
@@ -184,21 +146,11 @@ export default function Home() {
       setEditCurrencyCustom("");
     }
     cancelEditItem();
+    setCategoryFilter(CATEGORY_ALL);
   }, [projects, selectedProjectId]);
 
   const selectedProject =
     projects.find((p) => p.id === selectedProjectId) || null;
-
-  // Browser-Tab-Titel dynamisch setzen
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const base = "GatherCart";
-    if (selectedProject) {
-      document.title = `${base} – ${selectedProject.name}`;
-    } else {
-      document.title = base;
-    }
-  }, [selectedProject?.name]);
 
   function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
@@ -243,6 +195,8 @@ export default function Home() {
       status: "planned",
       createdAt: new Date().toISOString(),
       note: itemNote.trim() ? itemNote.trim() : undefined,
+      category: itemCategory.trim() ? itemCategory.trim() : undefined,
+      priority: itemPriority,
     };
 
     setProjects((prev) =>
@@ -259,6 +213,8 @@ export default function Home() {
     setItemPrice("");
     setItemQuantity("1");
     setItemNote("");
+    setItemCategory("");
+    setItemPriority("must");
   }
 
   function toggleItemStatus(projectId: number, itemId: number) {
@@ -351,6 +307,8 @@ export default function Home() {
     setEditItemPrice(String(item.price));
     setEditItemQuantity(String(item.quantity));
     setEditItemNote(item.note ?? "");
+    setEditItemCategory(item.category ?? "");
+    setEditItemPriority(item.priority ?? "must");
   }
 
   function cancelEditItem() {
@@ -361,6 +319,8 @@ export default function Home() {
     setEditItemPrice("");
     setEditItemQuantity("");
     setEditItemNote("");
+    setEditItemCategory("");
+    setEditItemPriority("must");
   }
 
   function saveEditedItem(projectId: number, itemId: number) {
@@ -369,6 +329,9 @@ export default function Home() {
     const newPrice = Number(editItemPrice);
     const newQuantity = editItemQuantity ? Number(editItemQuantity) : 1;
     const newNote = editItemNote.trim() ? editItemNote.trim() : undefined;
+    const newCategory = editItemCategory.trim()
+      ? editItemCategory.trim()
+      : undefined;
 
     setProjects((prev) =>
       prev.map((p) =>
@@ -385,6 +348,8 @@ export default function Home() {
                       price: newPrice,
                       quantity: newQuantity,
                       note: newNote,
+                      category: newCategory,
+                      priority: editItemPriority,
                     }
                   : item
               ),
@@ -473,10 +438,25 @@ export default function Home() {
           ? ` – Notiz: ${item.note}`
           : ` – Note: ${item.note}`
         : "";
+      const categoryPart = item.category
+        ? language === "de"
+          ? ` – Kategorie: ${item.category}`
+          : ` – Category: ${item.category}`
+        : "";
+      const priorityPart = item.priority
+        ? language === "de"
+          ? ` – Priorität: ${
+              item.priority === "must" ? "Muss" : "Nice-to-have"
+            }`
+          : ` – Priority: ${
+              item.priority === "must" ? "Must have" : "Nice to have"
+            }`
+        : "";
+
       lines.push(
-        `${check} ${item.name}${qtyPart} – ${item.price.toFixed(2)} ${currency} – ${
-          item.shopName
-        }${timePart}${notePart}`
+        `${check} ${item.name}${qtyPart} – ${item.price.toFixed(
+          2
+        )} ${currency} – ${item.shopName}${timePart}${notePart}${categoryPart}${priorityPart}`
       );
       if (item.url) {
         lines.push(`    ${item.url}`);
@@ -519,13 +499,58 @@ export default function Home() {
 
   const locale = language === "de" ? "de-DE" : "en-US";
 
-  // Items nach Filter + Sortierung
+  // --- Kategorien & Diagramm-Daten ---
+
+  let categoryEntries: { key: string; label: string; sum: number }[] = [];
+  if (selectedProject) {
+    const categoryMap: Record<string, number> = {};
+    selectedProject.items.forEach((item) => {
+      const key =
+        item.category && item.category.trim() !== ""
+          ? item.category.trim()
+          : CATEGORY_NONE;
+      const value = item.price * item.quantity;
+      categoryMap[key] = (categoryMap[key] || 0) + value;
+    });
+
+    categoryEntries = Object.entries(categoryMap)
+      .map(([key, sum]) => ({
+        key,
+        label:
+          key === CATEGORY_NONE
+            ? tr("Ohne Kategorie", "No category")
+            : key,
+        sum,
+      }))
+      .sort((a, b) => b.sum - a.sum);
+  }
+
+  const maxCategorySum =
+    categoryEntries.length > 0 ? categoryEntries[0].sum : 0;
+
+  const plannedPercentClamped =
+    plannedPercent != null ? Math.min(plannedPercent, 150) : null;
+  const purchasedPercentClamped =
+    purchasedPercent != null ? Math.min(purchasedPercent, 150) : null;
+
+  // Items nach Filter + Sortierung (Status + Kategorie)
   const filteredItems =
     selectedProject?.items
       .filter((item) => {
-        if (itemFilter === "all") return true;
-        if (itemFilter === "planned") return item.status === "planned";
-        if (itemFilter === "purchased") return item.status === "purchased";
+        // Status-Filter
+        if (itemFilter === "planned" && item.status !== "planned") return false;
+        if (itemFilter === "purchased" && item.status !== "purchased")
+          return false;
+
+        // Kategorien-Filter
+        if (categoryFilter !== CATEGORY_ALL) {
+          const key =
+            item.category && item.category.trim() !== ""
+              ? item.category.trim()
+              : CATEGORY_NONE;
+          if (key !== categoryFilter) return false;
+        }
+
         return true;
       })
       .sort((a, b) => {
@@ -634,6 +659,7 @@ export default function Home() {
 
         setProjects(normalized);
         setSelectedProjectId(normalized[0]?.id ?? null);
+        setCategoryFilter(CATEGORY_ALL);
         e.target.value = "";
         alert(
           language === "de"
@@ -662,19 +688,20 @@ export default function Home() {
 
     setProjects([]);
     setSelectedProjectId(null);
+    setCategoryFilter(CATEGORY_ALL);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(SELECTED_PROJECT_KEY);
     }
   }
 
+  const hasItems = !!selectedProject && selectedProject.items.length > 0;
+
   return (
-    <main className="min-h-screen bg-background text-foreground p-4 overflow-x-hidden">
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-4">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
         <header className="border-b border-slate-800 pb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {/* „Panther“-Logo (neutral gehalten) */}
             <div className="w-11 h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
               <span className="text-2xl" aria-hidden="true">
                 🐈‍⬛
@@ -689,13 +716,15 @@ export default function Home() {
               </h1>
               <span className="block text-xs text-slate-400">
                 {tr(
-                  "Ein schlankes Tool zum Planen von Budgets & Wunschlisten.",
-                  "A lightweight tool to plan budgets & wishlists."
+                  "Daten bleiben in diesem Browser gespeichert",
+                  "Data stays in this browser"
                 )}
               </span>
               <span className="block text-xs text-slate-500 mt-1">
                 {tr("Erstellt von", "Created by")}{" "}
-                <span className="font-semibold text-slate-200">Lownax</span>
+                <span className="font-semibold text-slate-200">
+                  Lownax
+                </span>
               </span>
             </div>
           </div>
@@ -732,57 +761,10 @@ export default function Home() {
                 "EN as global default language"
               )}
             </span>
-
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-slate-400">
-                {tr("Theme", "Theme")}
-              </span>
-              <button
-                onClick={() =>
-                  setTheme((prev) => (prev === "dark" ? "light" : "dark"))
-                }
-                className="px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs flex items-center gap-1"
-              >
-                {theme === "dark" ? "🌙 Dark" : "☀️ Light"}
-              </button>
-            </div>
           </div>
         </header>
 
-        {/* Kurze Erklärung / How-To */}
-        <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm">
-          <h2 className="text-base font-semibold mb-2">
-            {tr("Wie funktioniert GatherCart?", "How does GatherCart work?")}
-          </h2>
-          <ul className="list-disc list-inside space-y-1 text-slate-300">
-            <li>
-              {tr(
-                "Lege links ein Projekt an (z.B. Urlaub, Umzug, PC-Build).",
-                "Create a project on the left (e.g. vacation, moving, PC build)."
-              )}
-            </li>
-            <li>
-              {tr(
-                "Füge rechts Produkte/Dienstleistungen mit Preis, Menge und Notizen hinzu.",
-                "Add products/services with price, quantity and notes on the right."
-              )}
-            </li>
-            <li>
-              {tr(
-                "Nutze Filter, Sortierung und die Checkbox, um gekaufte Einträge zu markieren.",
-                "Use filters, sorting and the checkbox to mark purchased items."
-              )}
-            </li>
-            <li>
-              {tr(
-                "Exportiere oder importiere deine Daten als JSON, um sie zu sichern.",
-                "Export or import your data as JSON to back it up."
-              )}
-            </li>
-          </ul>
-        </section>
-
-        {/* Daten-Tools: Export / Import / Reset */}
+        {/* Daten-Tools */}
         <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs flex flex-wrap gap-3 items-center justify-between">
           <div className="font-semibold text-slate-200">
             {tr("Datenverwaltung", "Data management")}
@@ -830,8 +812,8 @@ export default function Home() {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder={tr(
-                      "z.B. Sommerurlaub 2026",
-                      "e.g. Summer trip 2026"
+                      "z.B. Urlaub, PC-Build, Umzug...",
+                      "e.g. trip, PC build, moving..."
                     )}
                   />
                 </div>
@@ -1150,6 +1132,108 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Übersicht & Diagramme */}
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-4">
+                  <h3 className="text-lg font-semibold">
+                    {tr("Übersicht & Diagramme", "Overview & charts")}
+                  </h3>
+
+                  {!hasItems && (
+                    <p className="text-sm text-slate-400">
+                      {tr(
+                        "Noch keine Daten für Diagramme vorhanden.",
+                        "No data for charts yet."
+                      )}
+                    </p>
+                  )}
+
+                  {hasItems && (
+                    <div className="space-y-4 text-xs sm:text-sm">
+                      {/* Budget-Balken */}
+                      {selectedProject.budget != null &&
+                        plannedPercentClamped != null && (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-300">
+                                {tr(
+                                  "Budgetauslastung",
+                                  "Budget usage"
+                                )}
+                              </span>
+                              <span className="text-slate-400">
+                                {plannedPercent!.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-slate-800 overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500"
+                                style={{
+                                  width: `${Math.min(
+                                    plannedPercentClamped,
+                                    100
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                            {purchasedPercent != null && (
+                              <p className="text-[11px] text-slate-400 mt-1">
+                                {tr(
+                                  "Davon bereits als gekauft markiert:",
+                                  "Of that already marked as purchased:"
+                                )}{" "}
+                                {purchasedPercent.toFixed(1)}%
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                      {/* Kategorien-Diagramm */}
+                      {categoryEntries.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-300">
+                              {tr(
+                                "Ausgaben nach Kategorie",
+                                "Spending by category"
+                              )}
+                            </span>
+                            <span className="text-slate-400">
+                              {selectedProject.currency}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {categoryEntries.map((entry) => {
+                              const widthPercent =
+                                maxCategorySum > 0
+                                  ? (entry.sum / maxCategorySum) * 100
+                                  : 0;
+                              return (
+                                <div key={entry.key} className="space-y-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="truncate text-slate-300">
+                                      {entry.label}
+                                    </span>
+                                    <span className="text-slate-400 whitespace-nowrap">
+                                      {entry.sum.toFixed(2)}{" "}
+                                      {selectedProject.currency}
+                                    </span>
+                                  </div>
+                                  <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                                    <div
+                                      className="h-full bg-emerald-500/80"
+                                      style={{ width: `${widthPercent}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Neues Produkt */}
                 <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                   <h3 className="text-lg font-semibold mb-3">
@@ -1168,8 +1252,8 @@ export default function Home() {
                         value={itemName}
                         onChange={(e) => setItemName(e.target.value)}
                         placeholder={tr(
-                          "z.B. Flug, Hotel, Monitor",
-                          "e.g. flight, hotel, monitor"
+                          "z.B. Flug, Hotel, Monitor...",
+                          "e.g. flight, hotel, monitor..."
                         )}
                       />
                     </div>
@@ -1182,24 +1266,43 @@ export default function Home() {
                         value={itemShop}
                         onChange={(e) => setItemShop(e.target.value)}
                         placeholder={tr(
-                          "z.B. Airline, Amazon...",
-                          "e.g. airline, Amazon..."
+                          "z.B. Airline, Amazon, MediaMarkt...",
+                          "e.g. airline, Amazon, store..."
                         )}
                       />
                     </div>
-                    <div className="flex flex-col gap-1 md:col-span-2">
+                    <div className="flex flex-col gap-1">
                       <label className="text-slate-300">
-                        {tr("URL (optional)", "URL (optional)")}
+                        {tr("Kategorie (optional)", "Category (optional)")}
                       </label>
                       <input
                         className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
-                        value={itemUrl}
-                        onChange={(e) => setItemUrl(e.target.value)}
+                        value={itemCategory}
+                        onChange={(e) => setItemCategory(e.target.value)}
                         placeholder={tr(
-                          "Produkt-Link (optional)",
-                          "Product link (optional)"
+                          "z.B. Flug, Hotel, Technik, Essen...",
+                          "e.g. flight, hotel, tech, food..."
                         )}
                       />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-slate-300">
+                        {tr("Priorität", "Priority")}
+                      </label>
+                      <select
+                        className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        value={itemPriority}
+                        onChange={(e) =>
+                          setItemPriority(e.target.value as ItemPriority)
+                        }
+                      >
+                        <option value="must">
+                          {tr("Muss ich haben", "Must have")}
+                        </option>
+                        <option value="nice">
+                          {tr("Nice-to-have", "Nice to have")}
+                        </option>
+                      </select>
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-slate-300">
@@ -1227,6 +1330,20 @@ export default function Home() {
                     </div>
                     <div className="flex flex-col gap-1 md:col-span-2">
                       <label className="text-slate-300">
+                        {tr("URL (optional)", "URL (optional)")}
+                      </label>
+                      <input
+                        className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-sm"
+                        value={itemUrl}
+                        onChange={(e) => setItemUrl(e.target.value)}
+                        placeholder={tr(
+                          "Produkt-Link (optional)",
+                          "Product link (optional)"
+                        )}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 md:col-span-2">
+                      <label className="text-slate-300">
                         {tr("Notiz (optional)", "Note (optional)")}
                       </label>
                       <textarea
@@ -1234,8 +1351,8 @@ export default function Home() {
                         value={itemNote}
                         onChange={(e) => setItemNote(e.target.value)}
                         placeholder={tr(
-                          "z.B. Alternative, nur bei Rabatt kaufen, Vergleichspreis...",
-                          "e.g. alternative, only if discounted, comparison price..."
+                          "z.B. Alternativen, Bedingungen, To-dos...",
+                          "e.g. alternatives, conditions, to-dos..."
                         )}
                       />
                     </div>
@@ -1292,6 +1409,28 @@ export default function Home() {
                           {tr("Gekauft", "Purchased")}
                         </button>
                       </div>
+
+                      {/* Kategorie-Filter */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-slate-300">
+                          {tr("Kategorie:", "Category:")}
+                        </span>
+                        <select
+                          className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700"
+                          value={categoryFilter}
+                          onChange={(e) => setCategoryFilter(e.target.value)}
+                        >
+                          <option value={CATEGORY_ALL}>
+                            {tr("Alle Kategorien", "All categories")}
+                          </option>
+                          {categoryEntries.map((entry) => (
+                            <option key={entry.key} value={entry.key}>
+                              {entry.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-slate-300">
                           {tr("Sortierung:", "Sort:")}
@@ -1394,6 +1533,12 @@ export default function Home() {
                               {tr("Shop", "Shop")}
                             </th>
                             <th className="text-left py-1 pr-2">
+                              {tr("Kategorie", "Category")}
+                            </th>
+                            <th className="text-left py-1 pr-2">
+                              {tr("Prio", "Priority")}
+                            </th>
+                            <th className="text-left py-1 pr-2">
                               {tr("Preis", "Price")}
                             </th>
                             <th className="text-left py-1 pr-2">
@@ -1467,6 +1612,61 @@ export default function Home() {
                                     />
                                   ) : (
                                     item.shopName
+                                  )}
+                                </td>
+                                <td className="py-1 pr-2 align-top">
+                                  {isEditing ? (
+                                    <input
+                                      className="w-full px-1 py-0.5 rounded bg-slate-950 border border-slate-700 text-xs"
+                                      value={editItemCategory}
+                                      onChange={(e) =>
+                                        setEditItemCategory(e.target.value)
+                                      }
+                                      placeholder={tr(
+                                        "optional",
+                                        "optional"
+                                      )}
+                                    />
+                                  ) : item.category ? (
+                                    <span>{item.category}</span>
+                                  ) : (
+                                    <span className="text-slate-500">
+                                      {tr("–", "–")}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-1 pr-2 align-top">
+                                  {isEditing ? (
+                                    <select
+                                      className="w-full px-1 py-0.5 rounded bg-slate-950 border border-slate-700 text-xs"
+                                      value={editItemPriority}
+                                      onChange={(e) =>
+                                        setEditItemPriority(
+                                          e.target.value as ItemPriority
+                                        )
+                                      }
+                                    >
+                                      <option value="must">
+                                        {tr(
+                                          "Muss ich haben",
+                                          "Must have"
+                                        )}
+                                      </option>
+                                      <option value="nice">
+                                        {tr(
+                                          "Nice-to-have",
+                                          "Nice to have"
+                                        )}
+                                      </option>
+                                    </select>
+                                  ) : item.priority === "nice" ? (
+                                    <span className="text-amber-300">
+                                      {tr("Nice-to-have", "Nice to have")}
+                                    </span>
+                                  ) : (
+                                    <span className="text-emerald-300">
+                                      {tr("Muss", "Must")}
+                                    </span>
                                   )}
                                 </td>
                                 <td className="py-1 pr-2 align-top">
@@ -1607,27 +1807,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* About / Footer */}
-        <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs text-slate-300">
-          <h2 className="text-sm font-semibold mb-2">
-            {tr("Über GatherCart", "About GatherCart")}
-          </h2>
-          <p className="mb-2">
-            {tr(
-              "GatherCart ist ein kleines, lokales Budget- und Planungs-Tool. Alle Daten bleiben in deinem Browser und werden nicht auf einen Server hochgeladen.",
-              "GatherCart is a small local budgeting & planning tool. All data stays in your browser and is not uploaded to any server."
-            )}
-          </p>
-          <p>
-            {tr(
-              "Nutze es z.B. für Urlaube, Hardware-Builds, Umzüge oder einfach deine persönliche Wunschliste.",
-              "Use it for trips, hardware builds, moving, or just your personal wishlist."
-            )}
-          </p>
-        </section>
-
         {/* Footer / Signatur */}
-        <footer className="mt-1 border-t border-slate-800 pt-3 text-[11px] text-slate-500 text-center">
+        <footer className="mt-4 border-t border-slate-800 pt-3 text-[11px] text-slate-500 text-center">
           GatherCart · {tr("Konzept & Umsetzung", "Concept & implementation")}{" "}
           <span className="font-semibold text-slate-300">Lownax</span>
         </footer>
@@ -1635,6 +1816,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
