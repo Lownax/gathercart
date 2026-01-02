@@ -358,13 +358,6 @@ export default function Home() {
     purchasedPercent = (totalPurchased / selectedProject.budget) * 100;
   }
 
-  // Item-Statistiken
-  const totalItems = selectedProject?.items.length ?? 0;
-  const openItems =
-    selectedProject?.items.filter((i) => i.status === "planned").length ?? 0;
-  const purchasedItems =
-    selectedProject?.items.filter((i) => i.status === "purchased").length ?? 0;
-
   async function handleCopyProjectList() {
     if (!selectedProject) return;
 
@@ -642,7 +635,9 @@ export default function Home() {
               </span>
               <span className="block text-xs text-slate-500 mt-1">
                 {tr("Erstellt von", "Created by")}{" "}
-                <span className="font-semibold text-slate-200">Lownax</span>
+                <span className="font-semibold text-slate-200">
+                  Lownax
+                </span>
               </span>
             </div>
           </div>
@@ -682,25 +677,6 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Intro / Beschreibung */}
-        <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm space-y-2">
-          <h2 className="text-lg font-semibold">
-            {tr("Was ist GatherCart?", "What is GatherCart?")}
-          </h2>
-          <p className="text-slate-200">
-            {tr(
-              "GatherCart hilft dir, Projekte zu planen – egal ob Urlaub, neuer PC, Wohnungseinrichtung oder einfach eine größere Shopping-Liste.",
-              "GatherCart helps you plan projects – whether it's a trip, a new PC build, furnishing an apartment or just a bigger shopping list."
-            )}
-          </p>
-          <p className="text-slate-300">
-            {tr(
-              "Lege Projekte an, erfasse Produkte mit Preis, Shop, Link und Notizen, markiere sie als gekauft und behalte dein Budget im Blick. Alles bleibt lokal in deinem Browser gespeichert.",
-              "Create projects, track items with price, shop, link and notes, mark them as purchased and keep an eye on your budget. Everything stays local in your browser."
-            )}
-          </p>
-        </section>
-
         {/* Daten-Tools: Export / Import / Reset */}
         <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs flex flex-wrap gap-3 items-center justify-between">
           <div className="font-semibold text-slate-200">
@@ -731,6 +707,39 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Kurze Erklärung / Onboarding */}
+        <section className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm space-y-2">
+          <h2 className="text-base font-semibold text-slate-100">
+            {tr("Was ist GatherCart?", "What is GatherCart?")}
+          </h2>
+          <p className="text-slate-300">
+            {tr(
+              "GatherCart hilft dir, Projekte mit Budget im Blick zu planen – zum Beispiel Reisen, Technik-Einkäufe, Wohnungseinrichtung oder laufende Monatskosten.",
+              "GatherCart helps you plan projects while keeping your budget under control – for example trips, tech builds, home setup or monthly expenses."
+            )}
+          </p>
+          <ol className="list-decimal list-inside text-slate-400 space-y-1">
+            <li>
+              {tr(
+                "Lege links ein Projekt mit optionalem Budget an.",
+                "Create a project on the left and (optionally) set a budget."
+              )}
+            </li>
+            <li>
+              {tr(
+                "Füge rechts Produkte mit Preis, Shop und Link hinzu.",
+                "Add items on the right with price, shop and link."
+              )}
+            </li>
+            <li>
+              {tr(
+                "Markiere bereits gekaufte Dinge als „Gekauft“, um den Überblick zu behalten.",
+                'Mark items as "Purchased" to keep track of what’s already bought.'
+              )}
+            </li>
+          </ol>
+        </section>
+
         <section className="grid md:grid-cols-[260px,1fr] gap-6">
           {/* Links: Projekte */}
           <div className="space-y-6">
@@ -749,8 +758,8 @@ export default function Home() {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder={tr(
-                      "z.B. Sommerurlaub 2026",
-                      "e.g. Summer vacation 2026"
+                      "z.B. Thailand-Reise Juni 2026",
+                      "e.g. Trip June 2026"
                     )}
                   />
                 </div>
@@ -1087,8 +1096,8 @@ export default function Home() {
                         value={itemName}
                         onChange={(e) => setItemName(e.target.value)}
                         placeholder={tr(
-                          "z.B. Flug, Hotel, Monitor...",
-                          "e.g. flight, hotel, monitor..."
+                          "z.B. Flug Berlin–Bangkok",
+                          "e.g. Flight"
                         )}
                       />
                     </div>
@@ -1102,7 +1111,7 @@ export default function Home() {
                         onChange={(e) => setItemShop(e.target.value)}
                         placeholder={tr(
                           "z.B. Airline, Amazon...",
-                          "e.g. airline, Amazon..."
+                          "e.g. Airline, Amazon..."
                         )}
                       />
                     </div>
@@ -1153,8 +1162,8 @@ export default function Home() {
                         value={itemNote}
                         onChange={(e) => setItemNote(e.target.value)}
                         placeholder={tr(
-                          "z.B. Stornobedingungen, Alternativen...",
-                          "e.g. cancellation rules, alternatives..."
+                          "z.B. Alternative, Versandkosten, Rabattcode...",
+                          "e.g. alternative, shipping cost, discount code..."
                         )}
                       />
                     </div>
@@ -1172,17 +1181,8 @@ export default function Home() {
                 {/* Produktliste */}
                 <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                    <h3 className="text-lg font-semibold flex flex-wrap items-baseline gap-2">
-                      <span>
-                        {tr("Produkte im Projekt", "Items in project")}
-                      </span>
-                      {selectedProject && (
-                        <span className="text-xs font-normal text-slate-400">
-                          {totalItems} {tr("insgesamt", "total")} · {openItems}{" "}
-                          {tr("offen", "open")} · {purchasedItems}{" "}
-                          {tr("gekauft", "purchased")}
-                        </span>
-                      )}
+                    <h3 className="text-lg font-semibold">
+                      {tr("Produkte im Projekt", "Items in project")}
                     </h3>
                     <div className="flex flex-col items-end gap-2 text-xs">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1544,3 +1544,4 @@ export default function Home() {
     </main>
   );
 }
+
