@@ -188,9 +188,7 @@ export default function Home() {
 
     setProjects((prev) =>
       prev.map((p) =>
-        p.id === selectedProject.id
-          ? { ...p, items: [...p.items, newItem] }
-          : p
+        p.id === selectedProject.id ? { ...p, items: [...p.items, newItem] } : p
       )
     );
 
@@ -609,21 +607,21 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-4">
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-4 overflow-x-hidden">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header mit Panther-Lownax-Branding */}
-        <header className="border-b border-slate-800 pb-4 flex items-center justify-between gap-4">
+        <header className="border-b border-slate-800 pb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             {/* „Panther“-Logo (neutral gehalten) */}
-            <div className="w-11 h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
-              <span className="text-2xl" aria-hidden="true">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 border border-emerald-500/60 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+              <span className="text-xl sm:text-2xl" aria-hidden="true">
                 🐈‍⬛
               </span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
                 GatherCart{" "}
-                <span className="text-slate-400 text-sm font-normal">
+                <span className="text-slate-400 text-xs sm:text-sm font-normal">
                   {tr("V1 – lokal", "V1 – local")}
                 </span>
               </h1>
@@ -633,11 +631,15 @@ export default function Home() {
                   "Data stays in this browser"
                 )}
               </span>
-              <span className="block text-xs text-slate-500 mt-1">
+              <span className="block text-xs text-slate-400 mt-1">
+                {tr(
+                  "Plane und sammle Produkte für Reisen, Setups, Umzüge, Events und mehr.",
+                  "Plan and organize items for trips, setups, moves, events and more."
+                )}
+              </span>
+              <span className="block text-[11px] text-slate-500 mt-1">
                 {tr("Erstellt von", "Created by")}{" "}
-                <span className="font-semibold text-slate-200">
-                  Lownax
-                </span>
+                <span className="font-semibold text-slate-200">Lownax</span>
               </span>
             </div>
           </div>
@@ -725,8 +727,8 @@ export default function Home() {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder={tr(
-                      "z.B. Thailand-Reise Juni 2026",
-                      "e.g. Thailand trip June 2026"
+                      "z.B. PC-Setup, Wohnzimmer-Makeover, Sommerurlaub",
+                      "e.g. PC setup, living room makeover, summer trip"
                     )}
                   />
                 </div>
@@ -1063,8 +1065,8 @@ export default function Home() {
                         value={itemName}
                         onChange={(e) => setItemName(e.target.value)}
                         placeholder={tr(
-                          "z.B. Flug Berlin–Bangkok",
-                          "e.g. Flight Berlin–Bangkok"
+                          "z.B. Flug, Hotel, Monitor, Kamera",
+                          "e.g. flight, hotel, monitor, camera"
                         )}
                       />
                     </div>
@@ -1077,8 +1079,8 @@ export default function Home() {
                         value={itemShop}
                         onChange={(e) => setItemShop(e.target.value)}
                         placeholder={tr(
-                          "z.B. Etihad, Amazon...",
-                          "e.g. Etihad, Amazon..."
+                          "z.B. MediaMarkt, Amazon, Airline...",
+                          "e.g. Amazon, local store, airline..."
                         )}
                       />
                     </div>
@@ -1129,8 +1131,8 @@ export default function Home() {
                         value={itemNote}
                         onChange={(e) => setItemNote(e.target.value)}
                         placeholder={tr(
-                          "z.B. Alternative Airline, nur Handgepäck möglich...",
-                          "e.g. alternative airline, hand luggage only..."
+                          "z.B. Rabattcode, Lieferzeit, Alternativen...",
+                          "e.g. discount code, delivery time, alternatives..."
                         )}
                       />
                     </div>
